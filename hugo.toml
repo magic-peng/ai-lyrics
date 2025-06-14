@@ -1,0 +1,4 @@
+baseURL = '/'
+languageCode = 'zh-CN'
+title = 'Lyrics Learning'
+theme = 'ananke'
