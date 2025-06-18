@@ -1,0 +1,371 @@
+---
+title: "光と影のロマン"
+author: "宇徳敬子"
+layout: default
+---
+
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>「光と影のロマン」- 交互式歌词解析</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Twilight Blues (Deep Navy, Slate Gray, Warm Gold accent) -->
+    <!-- Application Structure Plan: The SPA is structured into four thematic sections navigated by a sticky top bar: 1) Overview: Introduces the song and uses a radar chart to visualize the core 'Light vs. Shadow' conflict. 2) Interactive Lyrics: Uses an accordion to present the detailed line-by-line analysis from the report, allowing users to explore at their own pace without being overwhelmed. 3) Theme Explorer: Transforms the report's text-heavy theme analysis into interactive, clickable cards for better engagement. 4) The Concept of 'Roman': A dedicated section to interactively explore the multifaceted meaning of the keyword 'ロマン'. This structure transforms the linear report into a dynamic, non-linear exploratory tool, prioritizing user interaction and focused learning. -->
+    <!-- Visualization & Content Choices: 1. Core Themes: Goal=Compare/Inform. Viz=Radar Chart. Interaction=Hover for tooltips. Justification=Visually represents the tension and balance between the song's key dualities (Light/Shadow, Ideal/Reality), offering a more intuitive summary than text alone. Library=Chart.js. 2. Lyrics Analysis: Goal=Organize/Inform. Viz=HTML Accordion. Interaction=Click to expand/collapse. Justification=Manages dense information effectively, allowing users to focus on individual lines without scrolling through a long table. Library=Vanilla JS. 3. Key Themes: Goal=Organize/Inform. Viz=Interactive HTML cards. Interaction=Click to reveal details. Justification=Breaks down complex themes into digestible, visually separated chunks, encouraging exploration. Library=Vanilla JS. 4. 'Roman' Concept: Goal=Inform. Viz=Tab-like clickable buttons. Interaction=Click to show corresponding definition. Justification=Provides a focused, interactive way to understand a key, multi-layered term. Library=Vanilla JS. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+        }
+        .nav-link.active {
+            color: #f59e0b; /* text-amber-500 */
+            border-bottom-color: #f59e0b;
+            font-weight: 600;
+        }
+        .lyric-line {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .lyric-line:hover {
+            background-color: #1f2937; /* bg-gray-800 */
+        }
+        .explanation-panel {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out, padding 0.5s ease-out;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        .explanation-panel.open {
+            max-height: 1000px; /* Large enough to fit content */
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+        }
+        .roman-btn.active {
+            background-color: #f59e0b;
+            color: #111827;
+        }
+        rt {
+            font-size: 0.75em;
+            color: #d1d5db; /* text-gray-300 */
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+    <div class="container mx-auto px-4 py-8 max-w-5xl">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-white">光と影のロマン</h1>
+            <p class="text-xl text-gray-400 mt-2">交互式歌词与主题深度解析</p>
+        </header>
+
+        <nav class="sticky top-0 bg-gray-900/80 backdrop-blur-sm z-10 mb-10">
+            <div class="border-b border-gray-700">
+                <ul class="flex justify-center items-center -mb-px space-x-4 md:space-x-8 text-sm md:text-base">
+                    <li><a href="#overview" class="nav-link inline-block p-4 border-b-2 border-transparent">歌曲概览</a></li>
+                    <li><a href="#lyrics" class="nav-link inline-block p-4 border-b-2 border-transparent">交互歌词</a></li>
+                    <li><a href="#themes" class="nav-link inline-block p-4 border-b-2 border-transparent">主题探索</a></li>
+                    <li><a href="#roman" class="nav-link inline-block p-4 border-b-2 border-transparent">“罗曼”解读</a></li>
+                </ul>
+            </div>
+        </nav>
+
+        <main>
+            <!-- Section 1: Overview -->
+            <section id="overview" class="mb-16 scroll-mt-24">
+                <div class="bg-gray-800 bg-opacity-50 p-6 md:p-8 rounded-xl shadow-lg">
+                    <h2 class="text-2xl font-bold text-amber-400 mb-4">歌曲简介：光影间的追寻</h2>
+                    <p class="text-gray-300 leading-relaxed mb-6">「光と影のロマン」由宇徳敬子演唱，是动画《名侦探柯南》的早期片尾曲，于1997年发行。歌曲以其富有哲理的歌词和动人的旋律，深刻地映照了作品的核心——在真理（光）与谎言（影）的交织中，对宏大理想（罗曼）的不懈追寻。这首歌不仅是背景音乐，更是主人公柯南内心世界的音乐化表达。</p>
+
+                    <h3 class="text-xl font-bold text-amber-400 mb-4">核心主题可视化</h3>
+                    <p class="text-gray-300 leading-relaxed mb-6">歌曲的核心在于探讨多重二元对立概念。下图通过雷达图的形式，直观地展示了歌词中“光”与“影”两大主题所包含的元素，以及它们之间复杂的张力关系。它揭示了歌曲并非简单的善恶对立，而是对理想与现实、希望与挣扎、纯真与复杂等一系列矛盾的深刻探索。</p>
+                    <div class="chart-container">
+                        <canvas id="themeRadarChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Interactive Lyrics -->
+            <section id="lyrics" class="mb-16 scroll-mt-24">
+                <div class="bg-gray-800 bg-opacity-50 p-6 md:p-8 rounded-xl shadow-lg">
+                    <h2 class="text-2xl font-bold text-amber-400 mb-4">交互式歌词解析</h2>
+                    <p class="text-gray-300 leading-relaxed mb-6">本区域将歌曲的完整歌词分解为可交互的段落。请点击任意一句歌词，即可展开或折叠其对应的假名注音、中文翻译及深度解读。这种方式旨在帮助您将旋律与词义联系起来，更主动地学习和理解歌曲的内涵，避免一次性阅读大量文本的疲劳感。</p>
+                    <div id="lyrics-container" class="space-y-2"></div>
+                </div>
+            </section>
+
+            <!-- Section 3: Theme Explorer -->
+            <section id="themes" class="mb-16 scroll-mt-24">
+                 <div class="bg-gray-800 bg-opacity-50 p-6 md:p-8 rounded-xl shadow-lg">
+                    <h2 class="text-2xl font-bold text-amber-400 mb-4">主题探索</h2>
+                    <p class="text-gray-300 leading-relaxed mb-6">「光と影のロマン」的魅力在于其多层次的主题。以下卡片概括了歌曲的几个核心思想。点击卡片，可以深入了解每个主题的内涵，以及它如何与《名侦探柯南》的世界观产生深刻共鸣。</p>
+                    <div id="themes-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+                </div>
+            </section>
+
+            <!-- Section 4: Roman Concept -->
+            <section id="roman" class="scroll-mt-24">
+                 <div class="bg-gray-800 bg-opacity-50 p-6 md:p-8 rounded-xl shadow-lg">
+                    <h2 class="text-2xl font-bold text-amber-400 mb-4">“罗曼”的多重解读</h2>
+                    <p class="text-gray-300 leading-relaxed mb-6">歌曲标题中的「ロマン」(Roman) 是一个核心关键词。在日语中，这个外来语的含义远不止“爱情”。它蕴含着更宏大的概念。点击下方按钮，探索“罗曼”在歌曲语境下的不同层面含义。</p>
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <button class="roman-btn px-4 py-2 text-sm font-semibold bg-gray-700 rounded-full transition hover:bg-amber-600 hover:text-gray-900" data-target="roman-ideal">理想与冒险</button>
+                        <button class="roman-btn px-4 py-2 text-sm font-semibold bg-gray-700 rounded-full transition hover:bg-amber-600 hover:text-gray-900" data-target="roman-quest">人生的探求</button>
+                        <button class="roman-btn px-4 py-2 text-sm font-semibold bg-gray-700 rounded-full transition hover:bg-amber-600 hover:text-gray-900" data-target="roman-love">深刻的爱情</button>
+                    </div>
+                    <div id="roman-display" class="p-4 bg-gray-900 rounded-lg min-h-[100px] transition">
+                        <div id="roman-ideal" class="roman-content hidden">
+                            <h3 class="font-bold text-amber-300">理想与冒险 (Ideal & Adventure)</h3>
+                            <p class="mt-2 text-gray-300">指宏大的梦想、对未知的探索、史诗般的冒险精神。它是在逆境中依然不放弃追逐的英雄主义情怀，是歌曲开篇“彻夜畅谈”的激情来源。</p>
+                        </div>
+                         <div id="roman-quest" class="roman-content hidden">
+                            <h3 class="font-bold text-amber-300">人生的探求 (Life's Quest)</h3>
+                            <p class="mt-2 text-gray-300">代表一种对真理、对自我存在意义的深刻追问和探寻。歌曲结尾“挣扎着，奋斗着，罗曼史将永远延续”，表明这种探求是永无止境的人生旅程。</p>
+                        </div>
+                         <div id="roman-love" class="roman-content hidden">
+                            <h3 class="font-bold text-amber-300">深刻的爱情 (Deep Love)</h3>
+                            <p class="mt-2 text-gray-300">虽然歌曲超越了普通情歌，但“罗曼”也包含了深刻的情感联结。这种爱并非卿卿我我，而是历经考验、在光影交错中依然坚定的信念和羁绊。</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const appData = {
+            lyrics: [
+                { lyric: 'ロマン語れば一晩中', furigana: 'ロマンかたればいちばんじゅう', translation: '如果彻夜畅谈罗曼史', explanation: '「ロマン」在此不仅指爱情，更指梦想、理想或宏大的故事。 “一晩中”表示沉浸其中，不觉时间流逝的热情，象征着永无止境的探求心和激情。' },
+                { lyric: '疲れ知らずの all night long', furigana: 'つかれしらずのオールナイトロング', translation: '不知疲倦地通宵达旦', explanation: '描述一种精神高度集中或兴奋的状态，以至于感受不到身体的疲劳。这暗示了对探求或目标达成的强烈渴望。直接使用英文“all night long”增添了现代感和普遍性。' },
+                { lyric: '恋する暇もないよ 波が押し寄せてくる', furigana: 'こいするひまもないよ なみが おしよせてくる', translation: '连谈恋爱的时间都没有，波涛汹涌而来', explanation: '“波が押し寄せてくる”比喻接踵而至的挑战、境况，或是信息和情感的洪流。主人公忙于应对这些，无暇顾及个人情感上的“恋爱”，描绘了其所处环境的严峻和繁忙。这与侦探柯南不断面临案件的处境不谋而合。' },
+                { lyric: '記憶の中を泳いでも 現実は cool and dry', furigana: 'きおくのなかを およいでも げんじつはクールアンドドライ', translation: '即使在记忆中遨游，现实也冷酷而干燥', explanation: '即使沉浸在过去的温暖记忆或怀旧情怀中，当下的现实依然是冷酷、客观、不带情感的。这表达了理想与现实之间的差距，或情感上的距离感，暗示了“光与影”主题中“影”的部分，即残酷现实或真相的一面。' },
+                { lyric: '愛(それ)を確かめたくて 何処に彷徨い行くの', furigana: 'あい（それ）をたしかめたくて どこにさまよいゆくの', translation: '想确认那份爱（它），将要漂泊到何方？', explanation: '“愛(それ)”不仅指爱情，也可能指真相、本质，或是自身的信念等更广泛的“有价值之物”。为了确认它，主人公踏上了一段寻求答案的探索之旅。这与《柯南》中对真相的追寻相呼应。' },
+                { lyric: '遠い雲のように つかめないあなたに', furigana: 'とおいくものように つかめないあなたに', translation: '对你，如同远方的云朵般难以捉摸', explanation: '“远方的云朵”比喻对方的难以捉摸、神秘感，或是遥不可及的存在。这可能象征着侦探所追逐的神秘人物、真相的全貌，或是尚未预见的未来。' },
+                { lyric: 'ついてゆく 何処までも 心に誓って', furigana: 'ついてゆく どこまでも こころにちかって', translation: '无论去向何方，我都会追随，在心中起誓', explanation: '表达了无论对方是怎样的存在，都不会放弃对其的探寻和追逐，无论到何处都会紧随其后的坚定决心和忠诚。这是对信念或目标的坚定誓言。' },
+                { lyric: 'いつか全てが解っても あなたを好きでいられること', furigana: 'いつかすべてがわかっても あなたをすきでいられること', translation: '即使有一天一切都真相大白，我依然能喜欢你', explanation: '“一切真相大白”指现实或真相的全面揭示。即使结果与理想相悖，甚至残酷，主人公依然能保持对对方的“喜欢”或对信念的坚守。这既是疑问，也是一种决心，与《柯南》中面对真相所需的觉悟息息相关。' },
+                { lyric: 'たとえ戦う毎日に 明け暮れても', furigana: 'たとえたたかうまいにちに あけくれても', translation: '即使每天都沉浸在战斗中', explanation: '描绘了日复一日被困难、冲突，甚至字面意义上的“战斗”所占据的境况。这暗示了主人公所面临的严峻现实，以及为实现目标必须克服的考验。' },
+                { lyric: '懐かしさで思う故郷 昔の自分映す', furigana: 'なつかしさでおもうふるさと むかしのじぶんうつす', translation: '因怀念而思念的故乡，映照着过去的自己', explanation: '“故乡”不仅指物理上的地点，也象征着过去的自己、纯真时的自己，或是失去的平静时光。在怀旧中回望过去的自己，与当下“战斗的日常”形成对比。这象征着“光与影”主题中“光”的部分，即失去的纯粹与和平。' },
+                { lyric: '光と影のロマン 追いかけて', furigana: 'ひかりとかげのロマン おいかけて', translation: '追逐着光与影的罗曼史', explanation: '这句是歌曲的核心主题。“光与影”代表着真相与虚假、善与恶、理想与现实，或是表与里等二元性。追逐包含这一切的“罗曼史”，意味着不追求简单的答案，而是探寻复杂世界的本质、其中存在的美，或是自身的命运。这正是《柯南》中侦探的使命所在。' },
+                { lyric: '年下とわかっていても 生意気と知ってても', furigana: 'とししたとわかっていても なまいきと しってても', translation: '即使知道你年纪比我小，即使知道你很傲慢', explanation: '指向特定人物。明知对方年纪较小，有时甚至态度傲慢，却依然被其吸引或选择继续与之交往。这不仅指爱情，也可能暗示对才华或魅力的敬意，或一种无法抗拒的吸引力。这可以解读为柯南（新一）与小兰的关系，或柯南与灰原的关系。' },
+                { lyric: '手にするものはすべて あなたへと繋がってく', furigana: 'てにするものはすべて あなたへとつながってく', translation: '我所得到的一切，都与你相连', explanation: '表达了自身的行动和所得，最终都指向特定的对象或目标。这强调了该对象或目标在主人公生命中的核心地位，表现出强烈的执着和宿命般的联系。' },
+                { lyric: 'いつかこの愛の 形が変わっても', furigana: 'いつかこのあいの かたちがかわっても', translation: '即使这份爱的形式有一天会改变', explanation: '认识到“爱”可能会随时间流逝而改变，但依然希望或坚信其本质的联系和情感不会改变。这暗示了关系的演变，以及克服困难后依然存在的羁绊。' },
+                { lyric: '胸焦がす 不思議な人のこと 探して', furigana: 'むねこがす ふしぎなひとのこと さがして', translation: '寻找那个让我心焦的神秘之人', explanation: '“胸焦がす”指对某人怀有强烈的憧憬、热情，甚至痛苦的情感。“神秘之人”则暗示其魅力或存在超越理解。这表达了侦探追寻的神秘人物、待解的未知事物，或是等待宿命相遇的心情。' },
+                { lyric: 'あの時言えなかったけど', furigana: 'あのときいえなかったけど', translation: '尽管那时没能说出口', explanation: '暗示过去有未能表达的话语或情感。描绘了抱有遗憾、留恋或秘密心事的状态。' },
+                { lyric: '裸になれなかったけど', furigana: 'はだかになれなかったけど', translation: '尽管没能赤裸相见（坦诚相待）', explanation: '表达了精神上未能“赤裸”，即未能完全袒露真心或展现脆弱的境况。这暗示了自我保护、顾虑，或是与对方之间仍存在隔阂。' },
+                { lyric: 'まるで子供のように 無邪気になれたら', furigana: 'まるでこどものように むじゃきになれたら', translation: '如果能像孩子一样天真无邪', explanation: '表达了渴望摆脱复杂现实和情感，重新找回孩子般纯真无邪的心灵的愿望。这暗示了在成人世界中的挣扎和疲惫，以及对失去的“光”的向往。这与柯南的形象有所重叠。' },
+                { lyric: '膝をかかえて見た夕日 胸に刻み込んだ', furigana: 'ひざをかかえてみたゆうひ むねにきざみこんだ', translation: '抱膝而望的夕阳，深深铭刻在心中', explanation: '描绘了孤独和内省的场景。“抱膝”让人联想到独自沉思的身影。“夕阳”象征着一天的结束、某种阶段的终结，或是短暂的美丽，而这景象和随之而来的情感深深地印刻在心底。' },
+                { lyric: 'あなたの言葉(メロディー) ずっと忘れない', furigana: 'あなたのことば（メロディー）ずっとわすれない', translation: '你的话语（旋律），永远不会忘记', explanation: '表达了对方的话语、从中感受到的信息，或是与之共鸣的“旋律”，在心中留下深刻印记，是永不磨灭的珍贵之物。这强调了对方的影响力，以及其存在对生命所赋予的重大意义。' },
+                { lyric: '夜空 見上げて 月の光浴びて', furigana: 'よぞら みあげて つきのひかりあびて', translation: '仰望夜空，沐浴月光', explanation: '宁静而神秘的夜晚景象。月光是黑暗中的一束光，象征着希望、指引，或是内省的时刻。这强调了“光与影”主题中“光”的一面。' },
+                { lyric: 'ほんの一瞬 感じた永遠が 愛しい', furigana: 'ほんのいっしゅん かんじたえいえんが いとしい', translation: '仅仅一瞬间感受到的永恒，如此珍贵', explanation: '表达了在短暂的瞬间中，体验到普遍而永恒的价值。感受到转瞬即逝的瞬间所蕴含的永恒之美与尊贵，并认为其弥足珍贵。这歌颂了生命的刹那之美，以及珍惜这份美的心情。' },
+                { lyric: 'いつか全てが解っても あなたの愛を掴んでも', furigana: 'いつかすべてがわかっても あなたのあいを つかんでも', translation: '即使有一天一切都真相大白，即使我抓住了你的爱', explanation: '再次假设了“一切真相大白”的实现（真理的揭示）和“抓住你的爱”的目标达成。暗示了即使这些都实现，某些情感或态度仍将持续。' },
+                { lyric: '時に埋もれたように 流されない', furigana: 'ときにうもれたように ながされない', translation: '不被时间所埋没，不随波逐流', explanation: '表达了不被时间流逝或世俗潮流所淹没，不迷失自我、不动摇信念的坚定意志。这强调了坚守自身原则的重要性。' },
+                { lyric: 'ただ年をとるだけの大人には なりたくないよね', furigana: 'ただとしをとるだけのおとなには なりたくないよね', translation: '不想成为只是徒增年龄的成年人，对吧？', explanation: '表达了不满足于形式上的年龄增长，而是希望成为一个精神上不断成长、不失探求心的“大人”的强烈愿望。这拒绝了随波逐流的生活方式，展现了不断追寻新“罗曼”的态度。这与柯南（新一）的立场和心境深度契合。' },
+                { lyric: 'もう過去のために 泣いたりしない', furigana: 'もうかこのために ないたりしない', translation: '不再为过去哭泣', explanation: '表达了对过去的事件、遗憾或失去的事物不再流泪的决心。这表明了超越过去，积极迈向未来的坚定意志。' },
+                { lyric: '気持ちが 一人で 動きだす Wo', furana: 'きもちがひとりで うごきだすウォー', translation: '心情独自开始行动，Wo', explanation: '描绘了不依赖外界力量，内在情感或意志自发地驱使行动的情景。这展现了从自身内心涌现的坚定信念和热情，以及采取新行动的冲动。' },
+                { lyric: '天まで 届いて 今にもはちきれ', furigana: 'てんまで とどいて いまにもはちきれ', translation: '直达天际，仿佛即将迸裂', explanation: '表达了无法抑制的强烈情感或能量达到极限，仿佛即将爆发的状态。这暗示了激情或愿望的极致。' },
+                { lyric: 'あがいて もがいて どこまでも続くロマン', furigana: 'あがいてもがいて どこまでもつづくロマン', translation: '挣扎着，奋斗着，罗曼史将永远延续', explanation: '描绘了即使面对困难，也拼命努力、不断挣扎的身影。即便如此，“罗曼史”依然没有尽头，表达了探索的永恒性，以及在过程中发现价值的态度。这揭示了人生或目标达成之路并非一帆风顺，但其困难本身也是“罗曼史”的一部分这一深刻见解。' },
+            ],
+            themes: [
+                { icon: '🌓', title: '光与影的二元性', content: '歌曲的核心。它象征真理与虚假、理想与现实、过去与现在等多重对立。它并非简单的善恶划分，而是探索在复杂世界中，两种力量如何交织、并存，共同构成了“罗曼”的全部。' },
+                { icon: '🧭', title: '“罗曼”的追寻', content: '歌曲中的“罗曼”超越了爱情，代表着对宏大理想、人生真谛和自我价值的永恒探求。即使面临“波涛汹涌”的现实，被“战斗的每日”所占据，这份追寻的热情也从未熄灭。' },
+                { icon: '🌱', title: '成长与坚守', content: '歌曲探讨了成长的代价与意义。它渴望孩童般的纯真，却又决心“不再为过去哭泣”。核心在于拒绝成为“只是徒增年龄的成年人”，在变化中坚守永不随波逐流的信念。' },
+                { icon: '🕵️', title: '与柯南的共鸣', content: '歌曲与柯南（新一）的命运高度契合。柯南的双重身份正是“光与影”的体现；他对黑衣组织的追查是“罗曼”的探求；他在困境中的坚持，则是“不被时间埋没”的信念写照。' }
+            ]
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const sections = document.querySelectorAll('main section');
+            const navLinks = document.querySelectorAll('.nav-link');
+
+            function updateActiveLink() {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (pageYOffset >= sectionTop - 120) {
+                        current = section.getAttribute('id');
+                    }
+                });
+
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === `#${current}`) {
+                        link.classList.add('active');
+                    }
+                });
+            }
+
+            window.addEventListener('scroll', updateActiveLink);
+            updateActiveLink();
+
+            const renderLyrics = () => {
+                const container = document.getElementById('lyrics-container');
+                let lyricHTML = '';
+                appData.lyrics.forEach((line, index) => {
+                    lyricHTML += `
+                        <div>
+                            <div class="lyric-line p-4 flex justify-between items-center rounded-md" data-target="explanation-${index}">
+                                <p class="text-lg">${line.lyric}</p>
+                                <span class="text-gray-500 transform transition-transform duration-300">▼</span>
+                            </div>
+                            <div id="explanation-${index}" class="explanation-panel bg-gray-900 px-4 border-l-4 border-amber-500">
+                                <p class="font-semibold text-amber-200"><ruby>${line.lyric}<rt>${line.furigana}</rt></ruby></p>
+                                <p class="text-gray-300 mt-1"><strong>中译:</strong> ${line.translation}</p>
+                                <p class="text-gray-400 mt-2"><strong>解读:</strong> ${line.explanation}</p>
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = lyricHTML;
+
+                document.querySelectorAll('.lyric-line').forEach(line => {
+                    line.addEventListener('click', function() {
+                        const targetId = this.dataset.target;
+                        const panel = document.getElementById(targetId);
+                        const icon = this.querySelector('span');
+                        panel.classList.toggle('open');
+                        icon.classList.toggle('rotate-180');
+                    });
+                });
+            };
+
+            const renderThemes = () => {
+                const container = document.getElementById('themes-container');
+                container.innerHTML = appData.themes.map(theme => `
+                    <div class="bg-gray-800 border border-gray-700 rounded-lg p-5 cursor-pointer hover:shadow-amber-500/10 hover:shadow-lg hover:border-amber-500 transition-all duration-300 theme-card">
+                        <div class="flex items-center mb-3">
+                            <span class="text-3xl mr-4">${theme.icon}</span>
+                            <h3 class="text-xl font-semibold text-amber-400">${theme.title}</h3>
+                        </div>
+                        <p class="text-gray-300 leading-relaxed">${theme.content}</p>
+                    </div>
+                `).join('');
+            };
+
+            const renderRomanConcept = () => {
+                const buttons = document.querySelectorAll('.roman-btn');
+                const contents = document.querySelectorAll('.roman-content');
+                const display = document.getElementById('roman-display');
+
+                buttons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        buttons.forEach(btn => btn.classList.remove('active'));
+                        button.classList.add('active');
+
+                        const targetId = button.dataset.target;
+                        contents.forEach(content => {
+                            if (content.id === targetId) {
+                                content.classList.remove('hidden');
+                            } else {
+                                content.classList.add('hidden');
+                            }
+                        });
+                    });
+                });
+                // Activate the first button by default
+                buttons[0].click();
+            };
+
+            const renderChart = () => {
+                const ctx = document.getElementById('themeRadarChart').getContext('2d');
+                Chart.defaults.color = '#9ca3af'; // gray-400
+                Chart.defaults.borderColor = '#4b5563'; // gray-600
+                new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['理想/记忆', '希望/信念', '纯真/过去', '残酷现实', '永恒挣扎', '内心复杂'],
+                        datasets: [
+                        {
+                            label: '光 (Light)',
+                            data: [85, 90, 75, 0, 0, 0],
+                            backgroundColor: 'rgba(251, 191, 36, 0.2)',
+                            borderColor: 'rgba(251, 191, 36, 1)', // amber-400
+                            pointBackgroundColor: 'rgba(251, 191, 36, 1)',
+                            pointBorderColor: '#fff',
+                        },
+                        {
+                            label: '影 (Shadow)',
+                            data: [0, 0, 0, 80, 95, 70],
+                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                            borderColor: 'rgba(96, 165, 250, 1)', // blue-400
+                            pointBackgroundColor: 'rgba(96, 165, 250, 1)',
+                            pointBorderColor: '#fff',
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    font: { size: 14 }
+                                }
+                            },
+                             tooltip: {
+                                backgroundColor: '#1f2937', // gray-800
+                                titleColor: '#f3f4f6', // gray-100
+                                bodyColor: '#d1d5db', // gray-300
+                            }
+                        },
+                        scales: {
+                            r: {
+                                beginAtZero: true,
+                                max: 100,
+                                grid: { color: 'rgba(107, 114, 128, 0.5)'}, // gray-500
+                                angleLines: { color: 'rgba(75, 85, 99, 1)'}, // gray-600
+                                pointLabels: {
+                                    font: { size: 12 },
+                                    color: '#d1d5db' // gray-300
+                                }
+                            }
+                        }
+                    }
+                });
+            };
+
+            renderLyrics();
+            renderThemes();
+            renderRomanConcept();
+            renderChart();
+
+            // Active nav link on scroll
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        navLinks.forEach(link => {
+                            link.classList.remove('active');
+                            if (link.getAttribute('href').substring(1) === entry.target.id) {
+                                link.classList.add('active');
+                            }
+                        });
+                    }
+                });
+            }, { threshold: 0.5 });
+
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+        });
+    </script>
+</body>
+</html>
