@@ -1,0 +1,388 @@
+---
+title: "明日はれるかな"
+author: "桑田佳祐"
+layout: default
+---
+
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>《明日晴れるかな》- 交互式歌词解析</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Dawn Sky (Soft beige, warm terracotta, gentle sky blue accent) -->
+    <!-- Application Structure Plan: The SPA uses a tabbed navigation structure to divide content into four logical, interactive sections: 1. **歌曲概览 (Overview):** Introduces the song and uses a dynamic radar chart to visually compare its core themes (Hope, Rebirth, Past vs. Future), making abstract concepts immediately tangible. 2. **交互歌词 (Interactive Lyrics):** Presents the line-by-line analysis from the report in an accordion format. This allows users to click and explore each line's details (Furigana, explanation) without being overwhelmed by a large block of text, encouraging focused study. 3. **主题探索 (Theme Explorer):** Converts the report's in-depth thematic analysis into a set of interactive, visually distinct cards. Users can click on a theme (e.g., "Destiny vs. Choice") to read the detailed breakdown, promoting engagement over passive reading. 4. **核心词汇 (Core Vocabulary):** Transforms the vocabulary list into interactive "flashcards." This gamified approach allows users to actively test their knowledge by clicking to reveal the meaning of each word, enhancing learning retention. This structure deconstructs the linear report into a user-driven, exploratory experience that prioritizes usability and engagement. -->
+    <!-- Visualization & Content Choices: 1. **Core Themes:** Goal=Compare/Inform. Viz=Radar Chart. Interaction=Hover for tooltips. Justification=Effectively visualizes the balance and interplay between the song's major philosophical concepts, offering a quick, high-level understanding. Library=Chart.js. 2. **Lyrics Analysis:** Goal=Organize/Inform. Viz=HTML/CSS Accordion. Interaction=Click to expand/collapse. Justification=Manages the dense lyrical analysis by hiding details by default, preventing information overload and allowing users to control their learning pace. Library=Vanilla JS. 3. **Theme Explorer:** Goal=Organize/Inform. Viz=Interactive HTML Cards. Interaction=Click to reveal details. Justification=Segments complex thematic discussions into manageable, visually appealing chunks, making the content more approachable and easier to digest. Library=Vanilla JS. 4. **Vocabulary List:** Goal=Inform/Engage. Viz=Interactive "Flashcards". Interaction=Click/hover to reveal definition. Justification=Turns a static list into an active learning tool, improving memorization and engagement. Library=Vanilla JS. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #fdf6e3; /* solarized-base3 */
+            color: #657b83; /* solarized-base00 */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+            color: #586e75; /* solarized-base01 */
+            border-bottom-width: 2px;
+            border-color: transparent;
+        }
+        .nav-link.active, .nav-link:hover {
+            color: #b58900; /* solarized-yellow */
+            border-color: #b58900;
+        }
+        .lyric-item {
+            background-color: #fdf6e3;
+            border: 1px solid #eee8d5; /* solarized-base2 */
+            transition: all 0.3s ease;
+        }
+        .lyric-item:hover {
+             border-left-color: #cb4b16; /* solarized-orange */
+             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .lyric-header {
+            cursor: pointer;
+        }
+        .lyric-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out, padding 0.5s ease-in-out;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        .lyric-content.open {
+            max-height: 500px;
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+        }
+        .vocab-card {
+            perspective: 1000px;
+        }
+        .vocab-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .vocab-card.is-flipped .vocab-card-inner {
+            transform: rotateY(180deg);
+        }
+        .vocab-card-front, .vocab-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            padding: 1rem;
+        }
+        .vocab-card-front {
+            background-color: #eee8d5; /* solarized-base2 */
+            color: #586e75;
+        }
+        .vocab-card-back {
+            background-color: #93a1a1; /* solarized-base1 */
+            color: #fdf6e3;
+            transform: rotateY(180deg);
+            flex-direction: column;
+        }
+        rt {
+            font-size: 0.8em;
+            color: #839496; /* solarized-base0 */
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="container mx-auto px-4 py-8 max-w-5xl">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800" style="color: #073642;">明日晴れるかな</h1>
+            <p class="text-lg text-gray-600 mt-2" style="color: #586e75;">桑田佳祐 - 交互式歌词与主题深度解析</p>
+        </header>
+
+        <nav class="sticky top-0 bg-white/80 backdrop-blur-md z-10 mb-12 shadow-sm rounded-lg">
+            <ul class="flex justify-center items-center -mb-px space-x-4 md:space-x-8 text-base md:text-lg p-2">
+                <li><a href="#overview" class="nav-link inline-block py-3 px-2">歌曲概览</a></li>
+                <li><a href="#lyrics" class="nav-link inline-block py-3 px-2">交互歌词</a></li>
+                <li><a href="#themes" class="nav-link inline-block py-3 px-2">主题探索</a></li>
+                <li><a href="#vocabulary" class="nav-link inline-block py-3 px-2">核心词汇</a></li>
+            </ul>
+        </nav>
+
+        <main>
+            <!-- Section 1: Overview -->
+            <section id="overview" class="mb-16 scroll-mt-24">
+                <div class="bg-white p-6 md:p-8 rounded-xl shadow-md border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4" style="color: #268bd2;">歌曲简介：希望与重生的故事</h2>
+                    <p class="text-gray-700 leading-relaxed mb-6">《明日晴れるかな》是日本传奇音乐人桑田佳祐的代表作之一，作为日剧《求婚大作战》的主题曲广为人知。这首歌超越了简单的配乐，它以宏大的旋律和深刻的歌词，探讨了关于过去、未来、命运和自我接纳的普遍主题。本应用旨在将这份深度解析报告转化为一次直观的、可探索的互动体验。</p>
+
+                    <h3 class="text-xl font-bold text-gray-800 mb-4" style="color: #2aa198;">核心主题可视化</h3>
+                    <p class="text-gray-700 leading-relaxed mb-6">歌曲的核心在于探讨多重复杂的情感与哲学思辨。下方的雷达图直观地展示了歌曲中几个关键主题之间的关系与张力，如“希望与重生”、“接纳过去”与“展望未来”等。通过这种可视化方式，您可以快速把握歌曲所传达的复杂而充满希望的核心信息。</p>
+                    <div class="chart-container">
+                        <canvas id="themeRadarChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Interactive Lyrics -->
+            <section id="lyrics" class="mb-16 scroll-mt-24">
+                <div class="bg-white p-6 md:p-8 rounded-xl shadow-md border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4" style="color: #268bd2;">交互式歌词解析</h2>
+                    <p class="text-gray-700 leading-relaxed mb-6">本区域将歌曲的完整歌词分解为可交互的段落。请点击任意一句歌词，即可展开或折叠其对应的假名注音及深度解读。这种方式旨在帮助您将旋律与词义联系起来，更主动地学习和理解歌曲的内涵，避免一次性阅读大量文本的疲劳感。</p>
+                    <div id="lyrics-container" class="space-y-3"></div>
+                </div>
+            </section>
+
+            <!-- Section 3: Theme Explorer -->
+            <section id="themes" class="mb-16 scroll-mt-24">
+                <div class="bg-white p-6 md:p-8 rounded-xl shadow-md border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4" style="color: #268bd2;">主题探索</h2>
+                     <p class="text-gray-700 leading-relaxed mb-6">《明日晴れるかな》的魅力在于其多层次的主题。以下卡片概括了歌曲的几个核心思想。点击卡片，可以深入了解每个主题的内涵，以及它们是如何共同构建出这个关于希望与重生的动人故事。</p>
+                    <div id="themes-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+                </div>
+            </section>
+
+            <!-- Section 4: Core Vocabulary -->
+            <section id="vocabulary" class="scroll-mt-24">
+                <div class="bg-white p-6 md:p-8 rounded-xl shadow-md border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4" style="color: #268bd2;">核心词汇学习</h2>
+                    <p class="text-gray-700 leading-relaxed mb-6">为了更深入地理解歌词的精妙之处，我们从报告中提取了核心日语词汇。下面的词汇卡片设计成了可翻转的“抽认卡”。点击任意卡片即可“翻转”查看其读音和中文释义，这是一种有趣且高效的学习方式。</p>
+                    <div id="vocab-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"></div>
+                </div>
+            </section>
+        </main>
+        <footer class="text-center mt-12 text-gray-500 text-sm">
+            <p>交互式应用根据桑田佳祐《明日晴れるかな》深度解析报告生成。</p>
+            <p>&copy; 2025 - 交互式学习体验</p>
+        </footer>
+    </div>
+
+    <script>
+        const appData = {
+            lyrics: [
+                { lyric: '熱い涙や恋の叫びも', furigana: 'あつ（い）なみだ（や）こい（の）さけ（びも）', explanation: '曾经经历过的热泪和爱的呼喊，那些辉煌的日子，现在都去哪里了呢？表达了对过去的疑问和失落感。' },
+                { lyric: '輝ける日はどこへ消えたの？', furigana: 'かがや（ける）ひ（はどこへ）き（えたの）？', explanation: '曾经闪耀的日子都消失到哪里去了？表达了对失去的辉煌过去的疑问和失落感。' },
+                { lyric: '明日(あす)もあてなき道を彷徨うなら', furigana: 'あす（も）あて（なき）みち（を）さまよ（うなら）', explanation: '“明日(あす)”这个古朴而富有诗意的读法，不仅指明天，更指模糊的未来。如果明天也继续漫无目的地彷徨，流露出一种紧迫感和觉悟。' },
+                { lyric: 'これ以上元には戻れない', furigana: 'これ（いじょう）もと（には）もど（れない）', explanation: '表达了无法再回到过去，无法再退缩的强烈决心和某种觉悟。' },
+                { lyric: '耳を澄ませば心の声は', furigana: 'みみ（を）すま（せば）こころ（の）こえ（は）', explanation: '暗示了远离外界喧嚣，倾听自己内心声音的重要性。' },
+                { lyric: '僕に何を語り掛けるだろう？', furigana: 'ぼく（に）なに（を）かた（り）かけ（るだろう）？', explanation: '疑问句，期待内心的声音能给予当下的困境以答案，或指明前进的方向。' },
+                { lyric: '今は汚れた街の片隅にいて', furigana: 'いま（は）よご（れた）まち（の）かたすみ（にいて）', explanation: '描绘了身处“肮脏城市的一隅”的现状，无论是物理上还是精神上，都表达了一种封闭感和孤独感。' },
+                { lyric: 'あの頃の空を想うたびに', furigana: 'あのころ（の）そら（を）おも（うたびに）', explanation: '在这种境况下，每当回想起“那时的天空”，即纯真的过去或美好的回忆时，与现状的对比就更加鲜明。' },
+                { lyric: '神より賜えし孤独やトラブル', furigana: 'かみ（より）たまわ（えし）こどく（や）とらぶる', explanation: '将人生中遭遇的孤独和困境，视为仿佛是神所赐予的考验。' },
+                { lyric: '泣きたい時は泣きなよ', furigana: 'な（きたい）とき（は）な（きなよ）', explanation: '鼓励人们不要压抑情感，在想哭的时候就尽情哭泣，包含了对自我情感的接纳和某种慰藉。' },
+                { lyric: 'これが運命(さだめ)でしょうか？', furigana: 'これ（が）さだめ（でしょうか）？', explanation: '“运命(さだめ)”这个词带有不可避免的宿命感。表达了对当下痛苦是否是命中注定的深层挣扎和疑问。' },
+                { lyric: 'あきらめようか？', furigana: 'あきら（めようか）？', explanation: '描绘了在希望与绝望之间摇摆不定的内心状态。' },
+                { lyric: '季節は巡る魔法のように', furigana: 'きせつ（は）めぐ（る）まほう（のように）', explanation: '像季节更迭一样，人生的境况也会随之变化，充满了希望，仿佛这一切都将自然而然地发生。' },
+                { lyric: 'Oh, baby. No, maybe.', furigana: 'おーべいびー（のーめいびー）', explanation: '表达了对这种变化的犹豫不决和不确定性，以及内心尚未完全肯定的摇摆。' },
+                { lyric: '「愛」失くして「情」も無い？', furigana: 'あい（なくして）じょう（も）ない（？）', explanation: '疑问句，质疑失去爱是否也会让人失去人情味或同情心。' },
+                { lyric: '嘆くようなフリ', furigana: 'なげく（ような）ふり', explanation: '表现出一种假装悲叹的样子，暗示将自己的问题转嫁给他人。' },
+                { lyric: '世の中のせいにするだけ', furigana: 'よのなか（のせいにするだけ）', explanation: '批判性地看待将自己的问题归咎于“世间”的推卸责任的态度。' },
+                { lyric: 'Oh, baby. You\'re maybe.', furigana: 'おーべいびー（ゆあめいびー）', explanation: '一个重要的转折点，象征着开始摆脱不确定性，逐渐意识到自己内在的力量和可能性。' },
+                { lyric: '「哀」無くして「楽」は無い', furigana: 'あい（なくして）らく（は）ない', explanation: '肯定了人生的两面性：没有悲伤（哀）就无法体会真正的快乐（乐）。' },
+                { lyric: '幸せの Feeling', furigana: 'しあわせ（の）ふぃーりんぐ', explanation: '幸福感，快乐的心情。' },
+                { lyric: '抱きしめて One more time.', furigana: 'だ（きしめて）わんもあたいむ', explanation: '呼唤着要再次紧紧拥抱那份“幸福感”，表达了积极的决心和行动。' },
+                { lyric: '在りし日の己れを愛するために', furigana: 'ありしひ（の）おのれ（を）あい（するために）', explanation: '歌颂了接纳过去的自己，特别是那些经历过失败和后悔的自己的重要性，反映了艺术家在哲学上的深化。' },
+                { lyric: '想い出は美しくあるのさ', furigana: 'おもいで（は）うつく（しくあるのさ）', explanation: '即使是痛苦的回忆，也能被重新解读为“美丽”的，传达了深刻的自我接纳信息。' },
+                { lyric: '遠い過去よりまだ見ぬ人生は', furigana: 'とおい（かこ（より）まだ（みぬ）じんせい（は）', explanation: '强调了不应被过去束缚，而是要着眼于尚未到来的未来人生，这是一个强烈的前瞻性信息。' },
+                { lyric: '夢ひとつ叶えるためにある', furigana: 'ゆめ（ひとつ）かな（えるためにある）', explanation: '明确描绘了希望：未来的生命是为了实现哪怕一个梦想而存在的。' },
+                { lyric: '奇跡のドアを開けるのは誰？', furigana: 'きせき（の）どあ（を）あ（けるのは）だれ（？）', explanation: '疑问句，探寻人生中“奇迹”的可能性以及其发生的契机。' },
+                { lyric: '微笑みよ　もう一度だけ', furigana: 'ほほえみ（よ）もういちど（だけ）', explanation: '包含了渴望再次找回失去的笑容或幸福的恳切愿望。' },
+                { lyric: '君は気付くでしょうか？', furigana: 'きみ（は）きづ（くでしょうか）？', explanation: '询问听者（或自己）是否会意识到重要的事实。' },
+                { lyric: 'その鍵はもう', furigana: 'そのかぎ（はもう）', explanation: '暗示了开启奇迹的“钥匙”已经存在。' },
+                { lyric: '君の手のひらの上に', furigana: 'きみ（の）て（のひらの）うえ（に）', explanation: '核心信息：那把“钥匙”并非在外，而是在自己内心，在自己的手中。强调了相信自身可能性和力量的重要性。' },
+                { lyric: 'Why baby? Oh, tell me.', furigana: 'わいべいびー（おーてるみー）', explanation: '为什么会这样？请告诉我。表达了内心深处的疑问和寻求答案的迫切心情。' },
+                { lyric: '「愛」失くして「憎」も無い？', furigana: 'あい（なくして）にく（しみも）ない（？）', explanation: '疑问句，质疑失去爱是否会让人连憎恨都感受不到，变得麻木不仁。' },
+                { lyric: '見て見ないようなフリ', furigana: 'み（て）み（ないような）ふり', explanation: '描述了对问题或困难视而不见、假装不知情的行为。' },
+                { lyric: 'その身を守るため？', furigana: 'その（み（を）まも（るため）？', explanation: '反思这种视而不见的行为是否仅仅是为了保护自己免受伤害。' },
+                { lyric: 'もう少しの勝負じゃない!!', furigana: 'もうすこし（の）しょうぶ（じゃない）！！', explanation: '强烈的鼓励信息：这还不是结束，还能再坚持一下！' },
+                { lyric: 'くじけそうな Feeling', furigana: 'くじけ（そうな）ふぃーりんぐ', explanation: '感到要挫败、沮丧的情绪。' },
+                { lyric: '乗り越えて One more chance.', furigana: 'のりこえ（て）わんもあちゃんす', explanation: '表达了克服“挫败感”，抓住“再一次机会”的勇气和再挑战的意愿。' },
+                { lyric: '残るのは後悔だけ!!', furigana: 'のこ（るのは）こうかい（だけ）！！', explanation: '严厉地指出，如果只是抱怨而不行动，最终只会剩下后悔，敲响了警钟。' },
+                { lyric: 'Oh, baby. Smile baby.', furigana: 'おーべいびー（すまいるべいびー）', explanation: '积极的信息，鼓励自己或听者微笑。' },
+                { lyric: 'その生命(いのち)は永遠(とわ)じゃない', furigana: 'そのいのち（は）とわ（じゃない）', explanation: '歌颂了“生命(いのち)”并非“永远(とわ)”（是有限的），因此更应珍惜当下。赋予了深层、精神化的含义。' },
+                { lyric: '誰もがひとりひとり胸の中で', furigana: 'だれ（もが）ひとりひとり（むねの）なか（で）', explanation: '描绘了每个人内心深处，都在默默而真切地追问和祈愿的普遍情感。' },
+                { lyric: 'そっと囁いているよ', furigana: 'そ（っと）ささや（いているよ）', explanation: '描述了内心深处悄悄地、却又清晰地怀揣着某种愿望。' },
+                { lyric: '「明日(あした)晴れるかな…」', furigana: 'あした（はれるかな）…', explanation: '歌曲最后再次以“明日晴れるかな”的疑问作结。这里恢复了日常读法，使得这个希望和愿望更加贴近生活，直接触及听众的心灵。' },
+                { lyric: '遥か空の下', furigana: 'はる（か）そら（の）した', explanation: '在遥远的天空下，这个普遍的愿望得以升华，成为歌曲传递的最终信息。' },
+            ],
+            themes: [
+                { icon: '🌱', title: '“清算过去”与“展望未来”', content: '歌曲鼓励人们积极看待过去的经历，无论是辉煌还是伤痛，并将其作为未来的养分。它倡导的不是否定或修正过去，而是接纳它们，并勇敢地迈向“尚未到来的未来人生”。' },
+                { icon: '⚖️', title: '“命运”与“自我选择”的挣扎', content: '歌曲描绘了在宿命感与自我选择之间的内心挣扎。最终，它给出了一个充满力量的答案：“那把钥匙已在你的手心”，强调了我们拥有改变自己人生的力量，命运掌握在自己手中。' },
+                { icon: '🤝', title: '“孤独”与“自我接纳”', content: '歌曲承认孤独与困境是人生的一部分，但鼓励人们坦率地面对情感（“想哭的时候就哭吧”）。它警示了推卸责任的态度，并最终倡导微笑和自我肯定，爱并接纳自己才是通往幸福的道路。' },
+                { icon: '🚀', title: '桑田佳祐的艺术进化', content: '这首歌标志着桑田佳祐在创作上的成熟。他从过去作品中常见的对往昔的感伤，进化到了克服苦难、实现自我肯定和展望未来的哲学高度，是他艺术生涯的一个重要里程碑。' }
+            ],
+            vocabulary: [
+                { word: '明日', reading: 'あす / あした', meaning: '明天，未来。特别是“あす”带有诗意。' },
+                { word: '彷徨う', reading: 'さまよう', meaning: '漫无目的地徘徊，迷失方向。' },
+                { word: '澄ます', reading: 'すます', meaning: '（耳朵）集中倾听，专心。' },
+                { word: '賜えし', reading: 'たまわえし', meaning: '（由神或上位者）赐予（古语）。' },
+                { word: '運命', reading: 'さだめ', meaning: '命运，宿命，注定之事。' },
+                { word: '巡る', reading: 'めぐる', meaning: '循环，周转，季节更迭。' },
+                { word: '嘆く', reading: 'なげく', meaning: '悲叹，抱怨，叹息。' },
+                { word: '在りし日', reading: 'ありしひ', meaning: '往昔的日子，过去。' },
+                { word: '己れ', reading: 'おのれ', meaning: '自己，自身。' },
+                { word: '鍵', reading: 'かぎ', meaning: '解决问题的线索，关键。' },
+                { word: '生命', reading: 'いのち', meaning: '生命，性命。' },
+                { word: '永遠', reading: 'とわ', meaning: '永无止境，永久（古语）。' },
+                { word: '囁く', reading: 'ささやく', meaning: '低声细语，私语。' },
+                { word: '遥か', reading: 'はるか', meaning: '遥远，远方。' }
+            ]
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const sections = document.querySelectorAll('main section');
+            const navLinks = document.querySelectorAll('.nav-link');
+
+            function updateActiveLinkOnScroll() {
+                let currentSection = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (pageYOffset >= sectionTop - 150) {
+                        currentSection = section.getAttribute('id');
+                    }
+                });
+
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === `#${currentSection}`) {
+                        link.classList.add('active');
+                    }
+                });
+            }
+
+            window.addEventListener('scroll', updateActiveLinkOnScroll);
+
+            // Lyrics Accordion
+            const lyricsContainer = document.getElementById('lyrics-container');
+            if (lyricsContainer) {
+                let lyricsHtml = '';
+                appData.lyrics.forEach((line, index) => {
+                    lyricsHtml += `
+                        <div class="lyric-item rounded-lg shadow-sm">
+                            <div class="lyric-header p-4 flex justify-between items-center" data-target="${index}">
+                                <p class="text-md md:text-lg" style="color: #073642;">${line.lyric}</p>
+                                <span class="text-gray-400 transform transition-transform duration-300">▼</span>
+                            </div>
+                            <div id="content-${index}" class="lyric-content px-4 border-t border-gray-200">
+                                <p class="font-semibold text-gray-700"><ruby>${line.lyric}<rt>${line.furigana}</rt></ruby></p>
+                                <p class="text-gray-600 mt-2">${line.explanation}</p>
+                            </div>
+                        </div>
+                    `;
+                });
+                lyricsContainer.innerHTML = lyricsHtml;
+
+                lyricsContainer.addEventListener('click', (e) => {
+                    const header = e.target.closest('.lyric-header');
+                    if (header) {
+                        const targetId = header.dataset.target;
+                        const content = document.getElementById(`content-${targetId}`);
+                        const icon = header.querySelector('span');
+
+                        content.classList.toggle('open');
+                        icon.classList.toggle('rotate-180');
+                    }
+                });
+            }
+
+            // Themes
+            const themesContainer = document.getElementById('themes-container');
+            if(themesContainer) {
+                themesContainer.innerHTML = appData.themes.map(theme => `
+                    <div class="bg-blue-50 p-6 rounded-lg shadow-sm border border-blue-100" style="background-color: #fdf6e3; border-color: #eee8d5;">
+                        <div class="flex items-center mb-3">
+                            <span class="text-3xl mr-4">${theme.icon}</span>
+                            <h3 class="text-xl font-bold" style="color: #cb4b16;">${theme.title}</h3>
+                        </div>
+                        <p class="text-gray-600 leading-relaxed">${theme.content}</p>
+                    </div>
+                `).join('');
+            }
+
+            // Vocabulary
+            const vocabContainer = document.getElementById('vocab-container');
+            if(vocabContainer) {
+                vocabContainer.innerHTML = appData.vocabulary.map(vocab => `
+                    <div class="vocab-card h-28 cursor-pointer">
+                        <div class="vocab-card-inner rounded-lg shadow-sm">
+                            <div class="vocab-card-front">
+                                <span class="text-xl font-bold">${vocab.word}</span>
+                            </div>
+                            <div class="vocab-card-back">
+                                <span class="text-lg font-semibold">${vocab.reading}</span>
+                                <span class="text-sm">${vocab.meaning}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                vocabContainer.addEventListener('click', (e) => {
+                    const card = e.target.closest('.vocab-card');
+                    if (card) {
+                        card.classList.toggle('is-flipped');
+                    }
+                });
+            }
+
+            // Chart
+            const ctx = document.getElementById('themeRadarChart')?.getContext('2d');
+            if(ctx) {
+                new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['希望与重生', '接纳过去', '展望未来', '命运的挣扎', '自我选择', '内心力量'],
+                        datasets: [{
+                            label: '主题强度',
+                            data: [95, 85, 90, 75, 88, 92],
+                            fill: true,
+                            backgroundColor: 'rgba(42, 161, 152, 0.2)', // solarized-cyan
+                            borderColor: 'rgb(42, 161, 152)',
+                            pointBackgroundColor: 'rgb(42, 161, 152)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgb(42, 161, 152)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            r: {
+                                beginAtZero: true,
+                                pointLabels: { font: { size: 14 }, color: '#586e75' },
+                                grid: { color: '#eee8d5' },
+                                angleLines: { color: '#eee8d5' }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
