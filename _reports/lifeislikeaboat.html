@@ -1,0 +1,398 @@
+---
+title: "Life Is Like A Boat"
+author: "Rie Fu"
+layout: default
+---
+
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>《Life Is Like A Boat》- 交互式歌词解析 (修正版)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Ocean Serenity (Cool Grays, Soft Blues, with a hint of Teal) -->
+    <!-- Application Structure Plan: The SPA uses a tabbed navigation structure to divide content into four logical, interactive sections: 1. **歌曲概览 (Overview):** Introduces the song and its context, using a Doughnut chart to visually represent the core thematic tension between "Life's Challenges (Waves)" and "Hope & Inner Strength (Guidance from the Moon/You)". 2. **交互歌词 (Interactive Lyrics):** Presents the corrected, line-by-line analysis in an accordion format. This allows users to click and explore each line's details (Furigana, Chinese explanation; English lyrics are included but not explained), encouraging focused study of the accurate lyrics. 3. **主题探索 (Theme Explorer):** Converts the in-depth thematic analysis into a set of interactive, visually distinct cards, exploring concepts like the "Life's Journey Metaphor", "Solitude vs. Connection", and "Embracing Adversity". 4. **核心词汇 (Core Vocabulary):** Transforms the Japanese vocabulary list into interactive "flashcards." This gamified approach allows users to actively test their knowledge by clicking to reveal the meaning of each word, enhancing learning retention. This structure deconstructs the linear report into a user-driven, exploratory experience that prioritizes usability and engagement. -->
+    <!-- Visualization & Content Choices: 1. Thematic Balance: Goal=Inform/Compare. Viz=Doughnut Chart. Interaction=Hover for tooltips. Justification=Visually represents the song's central message that while life is full of challenges, there is an equally strong, if not stronger, source of hope and resilience. Library=Chart.js. 2. Lyrics Analysis: Goal=Organize/Inform. Viz=HTML Accordion. Interaction=Click to expand/collapse. Justification=Provides a clean, on-demand way to explore detailed lyric explanations for the corrected lyrics without overwhelming the user. Library=Vanilla JS. 3. Key Themes: Goal=Organize/Inform. Viz=Interactive HTML Cards. Interaction=Click to reveal details. Justification=Breaks down complex themes into digestible, visually distinct sections, encouraging exploration. Library=Vanilla JS. 4. Vocabulary List: Goal=Inform/Engage. Viz=Flippable HTML Flashcards. Interaction=Click to reveal definition. Justification=An effective and engaging method for vocabulary acquisition. Library=Vanilla JS. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+            color: #334155; /* slate-700 */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 350px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+            color: #64748b; /* slate-500 */
+            border-bottom-width: 2px;
+            border-color: transparent;
+        }
+        .nav-link.active, .nav-link:hover {
+            color: #0d9488; /* teal-600 */
+            border-color: #0d9488;
+        }
+        .lyric-item {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0; /* slate-200 */
+            transition: all 0.3s ease;
+        }
+        .lyric-item:hover {
+             border-left-color: #0f766e; /* teal-700 */
+             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .lyric-header {
+            cursor: pointer;
+        }
+        .lyric-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out, padding 0.5s ease-in-out;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        .lyric-content.open {
+            max-height: 500px;
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+        }
+        .vocab-card {
+            perspective: 1000px;
+        }
+        .vocab-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .vocab-card.is-flipped .vocab-card-inner {
+            transform: rotateY(180deg);
+        }
+        .vocab-card-front, .vocab-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            padding: 1rem;
+        }
+        .vocab-card-front {
+            background-color: #f1f5f9; /* slate-100 */
+            color: #475569; /* slate-600 */
+        }
+        .vocab-card-back {
+            background-color: #2dd4bf; /* teal-400 */
+            color: #ffffff;
+            transform: rotateY(180deg);
+            flex-direction: column;
+        }
+        rt {
+            font-size: 0.8em;
+            color: #64748b; /* slate-500 */
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="container mx-auto px-4 py-8 max-w-5xl">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-slate-900">Life Is Like A Boat</h1>
+            <p class="text-lg text-slate-600 mt-2">Rie Fu - 交互式歌词与主题深度解析 (修正版)</p>
+        </header>
+
+        <nav class="sticky top-0 bg-white/80 backdrop-blur-md z-10 mb-12 shadow-sm rounded-lg">
+            <ul class="flex justify-center items-center -mb-px space-x-4 md:space-x-8 text-base md:text-lg p-2">
+                <li><a href="#overview" class="nav-link inline-block py-3 px-2">歌曲概览</a></li>
+                <li><a href="#lyrics" class="nav-link inline-block py-3 px-2">交互歌词</a></li>
+                <li><a href="#themes" class="nav-link inline-block py-3 px-2">主题探索</a></li>
+                <li><a href="#vocabulary" class="nav-link inline-block py-3 px-2">核心词汇</a></li>
+            </ul>
+        </nav>
+
+        <main>
+            <!-- Section 1: Overview -->
+            <section id="overview" class="mb-16 scroll-mt-24">
+                <div class="bg-white p-6 md:p-8 rounded-xl shadow-md border border-slate-200">
+                    <h2 class="text-2xl font-bold text-teal-700 mb-4">歌曲简介：生命如舟，航向未知</h2>
+                    <p class="text-slate-700 leading-relaxed mb-6">《Life Is Like A Boat》是日本创作歌手Rie Fu的代表作，因作为动画《死神BLEACH》的首支片尾曲而广为人知。歌曲以其独特的英日双语歌词和深邃的哲学思考，将生命比作一艘在命运海洋中航行的小船。它探讨了孤独、迷茫、对同伴的渴望以及最终在挑战中寻找美的信念。本应用基于校准后的歌词进行全新解析，旨在为您提供一次精准且沉浸的互动学习体验。</p>
+
+                    <h3 class="text-xl font-bold text-teal-700 mb-4">核心主题：挑战与希望的交织</h3>
+                    <p class="text-slate-700 leading-relaxed mb-6">歌曲的核心在于展现生命旅程中挑战与希望的并存。人生如海，波涛（挑战）不断来袭，但月光与同伴（希望）同样指引着方向。下方的图表直观地展示了歌曲中“命运的波涛”（不可避免的挑战）与“希望的指引”（内心的力量与同伴的支持）这两大主题所占的情感比重，揭示了歌曲最终导向拥抱旅程、肯定希望的积极内核。</p>
+                    <div class="chart-container">
+                        <canvas id="themeBalanceChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Interactive Lyrics -->
+            <section id="lyrics" class="mb-16 scroll-mt-24">
+                <div class="bg-white p-6 md:p-8 rounded-xl shadow-md border border-slate-200">
+                    <h2 class="text-2xl font-bold text-teal-700 mb-4">交互式歌词解析 (校准版)</h2>
+                    <p class="text-slate-700 leading-relaxed mb-6">本区域为您呈现校准后的完整歌词。请点击任意一句歌词，即可展开或折叠其对应的假名注音、中文翻译及深度解读。英文歌词会保留，但不提供额外解释。这种方式旨在帮助您将旋律与正确的词义联系起来，更主动地学习和理解歌曲的内涵。</p>
+                    <div id="lyrics-container" class="space-y-3"></div>
+                </div>
+            </section>
+
+            <!-- Section 3: Theme Explorer -->
+            <section id="themes" class="mb-16 scroll-mt-24">
+                <div class="bg-white p-6 md:p-8 rounded-xl shadow-md border border-slate-200">
+                    <h2 class="text-2xl font-bold text-teal-700 mb-4">主题探索</h2>
+                     <p class="text-slate-700 leading-relaxed mb-6">《Life Is Like A Boat》的魅力在于其多层次的主题。以下卡片概括了歌曲的几个核心思想。点击卡片，可以深入了解每个主题的内涵，以及它们是如何共同构建出这个关于生命、孤独与连接的动人故事。</p>
+                    <div id="themes-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+                </div>
+            </section>
+
+            <!-- Section 4: Core Vocabulary -->
+            <section id="vocabulary" class="scroll-mt-24">
+                <div class="bg-white p-6 md:p-8 rounded-xl shadow-md border border-slate-200">
+                    <h2 class="text-2xl font-bold text-teal-700 mb-4">核心日语词汇学习</h2>
+                    <p class="text-slate-700 leading-relaxed mb-6">为了更深入地理解歌词的精妙之处，我们从报告中提取了核心日语词汇。下面的词汇卡片设计成了可翻转的“抽认卡”。点击任意卡片即可“翻转”查看其读音和中文释义，这是一种有趣且高效的学习方式。</p>
+                    <div id="vocab-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"></div>
+                </div>
+            </section>
+        </main>
+        <footer class="text-center mt-12 text-slate-500 text-sm">
+            <p>交互式应用根据Rie Fu《Life Is Like A Boat》深度解析报告生成。</p>
+            <p>&copy; 2025 - 交互式学习体验 (v2.0)</p>
+        </footer>
+    </div>
+
+    <script>
+        const appData = {
+            lyrics: [
+                { lyric: "Nobody knows who I really am" },
+                { lyric: "I've never felt this empty before" },
+                { lyric: "And if I ever need someone to come along" },
+                { lyric: "Who's gonna comfort me, and keep me strong?" },
+                { lyric: "We are all rowing the boat of fate" },
+                { lyric: "The waves keep on coming and we can't escape" },
+                { lyric: "But if we ever get lost on our way" },
+                { lyric: "The waves will guide you through another day" },
+                { lyric: '遠くで息をしてる', furigana: 'とおくでいきをしてる', translation: '仿佛在远处呼吸着', explanation: '开篇的日文歌词营造了一种疏离感和存在感的稀薄。主人公感觉自己仿佛与世界隔绝，像一个遥远的、不被注意的存在。' },
+                { lyric: '透明になったみたい', furigana: 'とうめいになったみたい', translation: '好像变得透明了', explanation: '进一步强化了不被看见、不被理解的孤独感。这种“透明”状态，象征着在人群中的隐形和内心的孤寂。' },
+                { lyric: '暗闇に思えたけど', furigana: 'くらやみにおもえたけど', translation: '曾以为是黑暗', explanation: '描述了主人公一度将自己的处境视为一片绝望的“黑暗”。这是一个内心状态的描绘，充满了迷茫和无助。' },
+                { lyric: '目隠しされてただけ', furigana: 'めかくしされてただけ', translation: '却只是被蒙住了双眼', explanation: '一个重要的转折。所谓的“黑暗”并非真实存在，而只是因为自己的视野被“蒙蔽”了。这暗示了希望的存在，以及改变视角的可能性。' },
+                { lyric: '祈りをささげて', furigana: 'いのりをささげて', translation: '献上祈祷', explanation: '在意识到自己只是被蒙蔽后，主人公转向内心，通过“祈祷”这种形式寻求力量和希望，表达了对未来的期盼。' },
+                { lyric: '新しい日を待つ', furigana: 'あたらしいひをまつ', translation: '等待新的一天', explanation: '象征着对重生和转机的信念。即使身处困境，也坚信会有崭新的一天到来。' },
+                { lyric: '鮮やかに光る海', furigana: 'あざやかにひかるうみ', translation: '鲜艳闪耀的大海', explanation: '“鲜艳闪耀”与之前的“黑暗”形成鲜明对比，描绘了剥开“蒙眼布”后看到的充满希望和可能性的未来景象。' },
+                { lyric: 'その果てまで', furigana: 'そのはてまで', translation: '直到那尽头', explanation: '表达了向着遥远的目标不断前行的决心，即使尽头未知，也充满勇气。' },
+                { lyric: "Nobody knows who I really am" },
+                { lyric: "Maybe they just don't give a damn" },
+                { lyric: "But if I ever need someone to come along" },
+                { lyric: "I know you will follow me, and keep me strong" },
+                { lyric: '人の心はうつりゆく', furigana: 'ひとのこころはうつりゆく', translation: '人心是会变化的', explanation: '表达了对人际关系不确定性的认知。人心易变，带来了不安感。' },
+                { lyric: '抜け出したくなる', furigana: 'ぬけだしたくなる', translation: '会想要逃离', explanation: '面对人心的变化和不确定性，自然会产生逃避和退缩的念头。' },
+                { lyric: '月はまた新しい周期で', furigana: 'つきはまたあたらしいしゅうきで', translation: '月亮又以新的周期', explanation: '“月亮”和“新周期”象征着自然界永恒的循环和规律。与易变的人心相比，月亮代表了一种稳定、可靠的指引。' },
+                { lyric: '舟を連れてく', furigana: 'ふねをつれてく', translation: '带着船前行', explanation: '在这不变的周期性指引下，生命的“舟”得以继续前行。这暗示了即使在人际关系中感到迷茫，也可以从更宏大、更恒定的事物中找到方向。' },
+                { lyric: "And every time I see your face," },
+                { lyric: "The oceans heave up to my heart" },
+                { lyric: "You make me wanna strain at the oars," },
+                { lyric: "and soon I can see the shore" },
+                { lyric: "I want you to know who I really am" },
+                { lyric: "I never thought I'd feel this way toward you" },
+                { lyric: "And if you ever need someone to come along" },
+                { lyric: "I will follow you, and keep you strong" },
+                { lyric: '旅はまだ続いてく', furigana: 'たびはまだつづいてく', translation: '旅途仍在继续', explanation: '明确点出生命是一场尚未结束的旅程，无论悲喜，都将继续。' },
+                { lyric: '穏やかな日も', furigana: 'おだやかなひも', translation: '即使是平静的日子', explanation: '旅途中既有波涛，也有风平浪静的日子，生命是复杂多样的。' },
+                { lyric: '月はまた新しい周期で', furigana: 'つきはまたあたらしいしゅうきで', translation: '月亮又以新的周期', explanation: '再次强调月亮周期的恒定性，它是不变的希望和指引。' },
+                { lyric: '舟を照らし出す', furigana: 'ふねをてらしだす', translation: '照亮小船', explanation: '月光不仅“带着”船，更“照亮”了船。这象征着在旅途中，希望不仅给予方向，也带来光明和慰藉，让行船之人看清前路。' },
+                { lyric: '祈りをささげて', furigana: 'いのりをささげて', translation: '献上祈祷' },
+                { lyric: '新しい日を待つ', furigana: 'あたらしいひをまつ', translation: '等待新的一天' },
+                { lyric: '鮮やかに光る海', furigana: 'あざやかにひかるうみ', translation: '鲜艳闪耀的大海' },
+                { lyric: 'その果てまで', furigana: 'そのはてまで', translation: '直到那尽头' },
+                { lyric: "And every time I see your face," },
+                { lyric: "the oceans heave up to my heart" },
+                { lyric: "You make me wanna strain at the oars," },
+                { lyric: "and soon I can't see the shore" },
+                { lyric: '運命の船を漕ぎ', furigana: 'うんめいのふねをこぎ', translation: '划着命运之舟', explanation: '从被动地“漂流”转变为主动地“划船”，表明主人公掌握了自己人生的主动权。' },
+                { lyric: '波は次から次へと私たちを襲うけど', furigana: 'なみはつぎからつぎへとわたしたちをおそうけど', translation: '波浪一个接一个地向我们袭来，但是', explanation: '承认挑战和困难（波浪）是持续不断的。' },
+                { lyric: 'それも素敵な旅ね', furigana: 'それもすてきなたびね', translation: '但那也是一段美妙的旅程呢', explanation: '对生命旅程的全然接纳。即使是充满挑战的“波浪”，也被视为构成“美妙旅程”的一部分。' },
+                { lyric: 'どれも素敵な旅ね', furigana: 'どれもすてきなたびね', translation: '每一个都是美妙的旅程呢', explanation: '进一步强调对生命中所有经历的肯定和珍视，无论是喜是悲，都是构成完整旅程的美好部分。' }
+            ],
+            themes: [
+                { icon: '⛵', title: '生命之舟的隐喻', content: '歌曲将人生比作一场航行。我们都是命运之舟的划手，在广阔的海洋中航行，面对接踵而至的波浪（挑战）。这象征着人生的不确定性、孤独的探索，以及在旅途中不断前行的状态。' },
+                { icon: '🌊', title: '拥抱挑战与无常', content: '歌词从最初的“无法逃避波浪”到最终的“那也是一段美妙的旅程”，展现了一种从被动接受到主动拥抱挑战的深刻转变。这体现了在苦难中发现美的哲学思想。' },
+                { icon: '🤝', title: '孤独与连接的渴望', content: '歌曲开篇充满了不被理解的孤独感（“Nobody knows who I really am”），但随着歌曲的推进，主人公找到了可以相互扶持的“你”，这种连接给予了TA力量，将孤独转化为相互的承诺和支持。' },
+                { icon: '🌕', title: '内在的希望与指引', content: '当人心易变时，“月亮”以其不变的周期，成为希望和指引的象征。它照亮前行的“舟”，也照亮内心，象征着在外部世界动荡时，可以从更永恒、更内在的信念中找到力量。' }
+            ],
+            vocabulary: [
+                 { word: '遠く', reading: 'とおく', meaning: '远处' },
+                 { word: '息をする', reading: 'いきをする', meaning: '呼吸' },
+                 { word: '透明', reading: 'とうめい', meaning: '透明' },
+                 { word: '暗闇', reading: 'くらやみ', meaning: '黑暗' },
+                 { word: '目隠し', reading: 'めかくし', meaning: '蒙眼' },
+                 { word: '祈り', reading: 'いのり', meaning: '祈祷' },
+                 { word: '新しい', reading: 'あたらしい', meaning: '新的' },
+                 { word: '鮮やか', reading: 'あざやか', meaning: '鲜艳，鲜明' },
+                 { word: '果て', reading: 'はて', meaning: '尽头，末端' },
+                 { word: '移りゆく', reading: 'うつりゆく', meaning: '变化，变迁' },
+                 { word: '抜け出す', reading: 'ぬけだす', meaning: '逃离，摆脱' },
+                 { word: '周期', reading: 'しゅうき', meaning: '周期' },
+                 { word: '舟', reading: 'ふね', meaning: '船' },
+                 { word: '連れてく', reading: 'つれてく', meaning: '带着去' },
+                 { word: '旅', reading: 'たび', meaning: '旅途，旅行' },
+                 { word: '穏やか', reading: 'おだやか', meaning: '平静，安稳' },
+                 { word: '照らし出す', reading: 'てらしだす', meaning: '照亮' },
+                 { word: '運命', reading: 'うんめい', meaning: '命运' },
+                 { word: '漕ぐ', reading: 'こぐ', meaning: '划（船）' },
+                 { word: '波', reading: 'なみ', meaning: '波浪' },
+                 { word: '襲う', reading: 'おそう', meaning: '袭击，侵袭' },
+                 { word: '素敵', reading: 'すてき', meaning: '美妙，极好' }
+            ]
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const sections = document.querySelectorAll('main section');
+            const navLinks = document.querySelectorAll('.nav-link');
+
+            function updateActiveLinkOnScroll() {
+                let currentSection = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (pageYOffset >= sectionTop - 150) {
+                        currentSection = section.getAttribute('id');
+                    }
+                });
+
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === `#${currentSection}`) {
+                        link.classList.add('active');
+                    }
+                });
+            }
+
+            window.addEventListener('scroll', updateActiveLinkOnScroll);
+
+            const lyricsContainer = document.getElementById('lyrics-container');
+            if (lyricsContainer) {
+                let lyricsHtml = '';
+                appData.lyrics.forEach((line, index) => {
+                    const isJapanese = line.furigana;
+                    lyricsHtml += `
+                        <div class="lyric-item rounded-lg shadow-sm">
+                            <div class="lyric-header p-4 flex justify-between items-center" data-target="${index}">
+                                <p class="text-md md:text-lg text-slate-800">${line.lyric}</p>
+                                <span class="text-slate-400 transform transition-transform duration-300 ${isJapanese ? '' : 'opacity-0'}">▼</span>
+                            </div>
+                            <div id="content-${index}" class="lyric-content px-4 border-t border-slate-200">
+                                ${isJapanese ? `
+                                <p class="font-semibold text-teal-700"><ruby>${line.lyric.replace(/([\u4e00-\u9faf]+)/g, '$1<rt>' + line.furigana + '</rt>')}</ruby></p>
+                                <p class="text-slate-600 mt-2"><strong>中译:</strong> ${line.translation}</p>
+                                <p class="text-slate-600 mt-2"><strong>解读:</strong> ${line.explanation}</p>
+                                ` : `
+                                <p class="text-slate-600 mt-2">英文歌词，不提供额外解释。</p>
+                                `}
+                            </div>
+                        </div>
+                    `;
+                });
+                lyricsContainer.innerHTML = lyricsHtml;
+
+                lyricsContainer.addEventListener('click', (e) => {
+                    const header = e.target.closest('.lyric-header');
+                    if (header) {
+                        const targetId = header.dataset.target;
+                        const content = document.getElementById(`content-${targetId}`);
+                        const icon = header.querySelector('span');
+
+                        content.classList.toggle('open');
+                        if (icon && !icon.classList.contains('opacity-0')) {
+                            icon.classList.toggle('rotate-180');
+                        }
+                    }
+                });
+            }
+
+            const themesContainer = document.getElementById('themes-container');
+            if(themesContainer) {
+                themesContainer.innerHTML = appData.themes.map(theme => `
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+                        <div class="flex items-center mb-3">
+                            <span class="text-3xl mr-4">${theme.icon}</span>
+                            <h3 class="text-xl font-bold text-teal-700">${theme.title}</h3>
+                        </div>
+                        <p class="text-slate-700 leading-relaxed">${theme.content}</p>
+                    </div>
+                `).join('');
+            }
+
+            const vocabContainer = document.getElementById('vocab-container');
+            if(vocabContainer) {
+                vocabContainer.innerHTML = appData.vocabulary.map(vocab => `
+                    <div class="vocab-card h-28 cursor-pointer">
+                        <div class="vocab-card-inner rounded-lg shadow-sm">
+                            <div class="vocab-card-front">
+                                <span class="text-xl font-bold">${vocab.word}</span>
+                            </div>
+                            <div class="vocab-card-back">
+                                <span class="text-lg font-semibold">${vocab.reading}</span>
+                                <span class="text-sm mt-1">${vocab.meaning}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                vocabContainer.addEventListener('click', (e) => {
+                    const card = e.target.closest('.vocab-card');
+                    if (card) {
+                        card.classList.toggle('is-flipped');
+                    }
+                });
+            }
+
+            const ctx = document.getElementById('themeBalanceChart')?.getContext('2d');
+            if(ctx) {
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['命运的波涛 (挑战)', '希望的指引 (力量)'],
+                        datasets: [{
+                            data: [45, 55],
+                            backgroundColor: [
+                                '#64748b', /* slate-500 */
+                                '#2dd4bf'  /* teal-400 */
+                            ],
+                            hoverOffset: 4,
+                            borderColor: '#f8fafc',
+                            borderWidth: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { font: { size: 14 }, color: '#475569' }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
