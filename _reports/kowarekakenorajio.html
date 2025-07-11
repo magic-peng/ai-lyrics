@@ -1,0 +1,414 @@
+---
+title: "壊れかけのラジオ"
+author: "德永英明"
+layout: default
+---
+
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>《壊れかけのRadio》- 交互式歌词解析</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Nostalgic Sepia (Warm grays, soft browns, muted blues, with a hint of dusty rose) -->
+    <!-- Application Structure Plan: The SPA is structured into four thematic tabs for intuitive exploration: 1. **歌曲概览 (Overview):** Introduces Hideaki Tokunaga and the song's context. A doughnut chart visually represents the core thematic conflict between "The Weight of Reality (人波)" and "The Echo of Innocence (故郷の空)". 2. **交互歌词 (Interactive Lyrics):** Utilizes an accordion layout for a line-by-line analysis of the corrected lyrics. Users can click to reveal detailed explanations and furigana, focusing on the song's narrative progression from disillusionment to a glimmer of hope. 3. **主题探索 (Theme Explorer):** Presents the deep thematic analysis (e.g., the symbolism of the "Radio," the urban/rural dichotomy) as a series of interactive cards, allowing users to delve into the song's philosophical layers. 4. **核心词汇 (Core Vocabulary):** Transforms the key vocabulary list into interactive, flippable flashcards. This gamified approach enhances learning and recall of the song's specific and evocative language. This structure deconstructs the dense report into a user-driven, digestible, and engaging learning experience. -->
+    <!-- Visualization & Content Choices: 1. Thematic Conflict: Goal=Compare/Inform. Viz=Doughnut Chart. Interaction=Hover for details. Justification=Visually encapsulates the central tension between the overwhelming pressure of adult life ("人波") and the pull of nostalgic purity ("故郷の空"), which is a primary driver of the song's narrative. Library=Chart.js. 2. Lyric Deep-Dive: Goal=Organize/Inform. Viz=HTML Accordion. Interaction=Click to expand. Justification=Provides a clean, uncluttered way to access detailed analysis for each line, preventing information overload while encouraging focused study. Library=Vanilla JS. 3. Conceptual Exploration: Goal=Organize/Inform. Viz=Interactive Cards. Interaction=Click/hover effects. Justification=Breaks down abstract concepts into manageable, visually appealing units, facilitating comprehension of the song's deeper meanings. Library=Vanilla JS. 4. Vocabulary Acquisition: Goal=Engage/Inform. Viz=Flippable Flashcards. Interaction=Click to reveal definition. Justification=An active learning tool that is more effective for memory retention than a static list. Library=Vanilla JS. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #f5f5f4; /* stone-100 */
+            color: #44403c; /* stone-700 */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 350px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+            color: #78716c; /* stone-500 */
+            border-bottom-width: 2px;
+            border-color: transparent;
+        }
+        .nav-link.active, .nav-link:hover {
+            color: #a16207; /* yellow-700 */
+            border-color: #a16207;
+        }
+        .lyric-item {
+            background-color: #ffffff;
+            border: 1px solid #e7e5e4; /* stone-200 */
+            transition: all 0.3s ease;
+        }
+        .lyric-item:hover {
+             border-left-color: #a16207; /* yellow-700 */
+             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .lyric-header {
+            cursor: pointer;
+        }
+        .lyric-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out, padding 0.5s ease-in-out;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        .lyric-content.open {
+            max-height: 500px;
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+        }
+        .vocab-card {
+            perspective: 1000px;
+        }
+        .vocab-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .vocab-card.is-flipped .vocab-card-inner {
+            transform: rotateY(180deg);
+        }
+        .vocab-card-front, .vocab-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            padding: 1rem;
+        }
+        .vocab-card-front {
+            background-color: #e7e5e4; /* stone-200 */
+            color: #57534e; /* stone-600 */
+        }
+        .vocab-card-back {
+            background-color: #ca8a04; /* yellow-600 */
+            color: #ffffff;
+            transform: rotateY(180deg);
+            flex-direction: column;
+        }
+        rt {
+            font-size: 0.8em;
+            color: #a8a29e; /* stone-400 */
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="container mx-auto px-4 py-8 max-w-5xl">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-stone-900">壊れかけのRadio</h1>
+            <p class="text-lg text-stone-600 mt-2">德永英明 - 交互式歌词与主题深度解析</p>
+        </header>
+
+        <nav class="sticky top-0 bg-white/80 backdrop-blur-md z-10 mb-12 shadow-sm rounded-lg">
+            <ul class="flex justify-center items-center -mb-px space-x-4 md:space-x-8 text-base md:text-lg p-2">
+                <li><a href="#overview" class="nav-link inline-block py-3 px-2">歌曲概览</a></li>
+                <li><a href="#lyrics" class="nav-link inline-block py-3 px-2">交互歌词</a></li>
+                <li><a href="#themes" class="nav-link inline-block py-3 px-2">主题探索</a></li>
+                <li><a href="#vocabulary" class="nav-link inline-block py-3 px-2">核心词汇</a></li>
+            </ul>
+        </nav>
+
+        <main>
+            <!-- Section 1: Overview -->
+            <section id="overview" class="mb-16 scroll-mt-24">
+                <div class="bg-white p-6 md:p-8 rounded-xl shadow-md border border-stone-200">
+                    <h2 class="text-2xl font-bold text-yellow-800 mb-4">歌曲简介：破碎收音机的时代回响</h2>
+                    <p class="text-stone-700 leading-relaxed mb-6">《壊れかけのRadio》是日本传奇歌手德永英明于1990年发行的代表作。这首由他亲自作词作曲的歌曲，以其独特的“治愈系歌声”和深刻的歌词，精准捕捉了日本泡沫经济末期，年轻人在物质繁华与精神迷茫中的普遍困惑。歌曲不仅仅是对个人青春的怀旧，更成为了一个时代的缩影，探讨了从纯真走向复杂的成长阵痛，以及对真实幸福的永恒追问。</p>
+
+                    <h3 class="text-xl font-bold text-yellow-800 mb-4">核心主题：现实的重压与纯真的回响</h3>
+                    <p class="text-stone-700 leading-relaxed mb-6">歌曲的核心在于展现主人公在现实世界的“人潮”中迷失，与对纯真过往“故乡天空”的怀念之间的深刻矛盾。下方的图表直观地展示了这两大主题在歌曲中的情感比重。“现实的重压”象征着成人世界的复杂与压力，而“纯真的回响”则代表着内心深处对简单、真实的渴望。正是这种拉扯，构成了歌曲感人至深的力量。</p>
+                    <div class="chart-container">
+                        <canvas id="themeBalanceChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Interactive Lyrics -->
+            <section id="lyrics" class="mb-16 scroll-mt-24">
+                <div class="bg-white p-6 md:p-8 rounded-xl shadow-md border border-stone-200">
+                    <h2 class="text-2xl font-bold text-yellow-800 mb-4">交互式歌词解析</h2>
+                    <p class="text-stone-700 leading-relaxed mb-6">本区域为您呈现校准后的完整歌词。请点击任意一句歌词，即可展开或折叠其对应的假名注音、中文翻译及深度解读。这种方式旨在帮助您将旋律与词义联系起来，更主动地学习和理解歌曲的内涵。</p>
+                    <div id="lyrics-container" class="space-y-3"></div>
+                </div>
+            </section>
+
+            <!-- Section 3: Theme Explorer -->
+            <section id="themes" class="mb-16 scroll-mt-24">
+                <div class="bg-white p-6 md:p-8 rounded-xl shadow-md border border-stone-200">
+                    <h2 class="text-2xl font-bold text-yellow-800 mb-4">主题探索</h2>
+                     <p class="text-stone-700 leading-relaxed mb-6">《壊れかけのRadio》的魅力在于其多层次的主题。以下卡片概括了歌曲的几个核心思想。点击卡片，可以深入了解每个主题的内涵，以及它们是如何共同构建出这个关于成长、迷失与希望的动人故事。</p>
+                    <div id="themes-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+                </div>
+            </section>
+
+            <!-- Section 4: Core Vocabulary -->
+            <section id="vocabulary" class="scroll-mt-24">
+                <div class="bg-white p-6 md:p-8 rounded-xl shadow-md border border-stone-200">
+                    <h2 class="text-2xl font-bold text-yellow-800 mb-4">核心日语词汇学习</h2>
+                    <p class="text-stone-700 leading-relaxed mb-6">为了更深入地理解歌词的精妙之处，我们从报告中提取了核心日语词汇。下面的词汇卡片设计成了可翻转的“抽认卡”。点击任意卡片即可“翻转”查看其读音和中文释义，这是一种有趣且高效的学习方式。</p>
+                    <div id="vocab-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"></div>
+                </div>
+            </section>
+        </main>
+        <footer class="text-center mt-12 text-stone-500 text-sm">
+            <p>交互式应用根据德永英明《壊れかけのRadio》深度解析报告生成。</p>
+            <p>&copy; 2025 - 交互式学习体验</p>
+        </footer>
+    </div>
+
+    <script>
+        const appData = {
+            lyrics: [
+                { lyric: '何も聞こえない', furigana: 'なにもきこえない', translation: '什么也听不见', explanation: '歌曲以一种感官上的隔绝感开篇，暗示主人公内心与外部世界的疏离，或是曾经清晰的声音（如梦想、希望）如今已变得模糊不清。' },
+                { lyric: '何も聞かせてくれない', furigana: 'なにもきかせてくれない', translation: '什么也不让我听', explanation: '从“听不见”到“不让我听”，主观的感受转变为一种被动的状态，暗示外部世界不再给予他明确的指引，或是他失去了接收信息的能力。' },
+                { lyric: '僕の身体が昔より', furigana: 'ぼくのからだがむかしより', translation: '我的身体比以前', explanation: '将内心的变化归因于身体的成长，开始对“成为大人”这件事进行反思。' },
+                { lyric: '大人になったからなのか', furigana: 'おとなになったからなのか', translation: '变得更像大人了吗？', explanation: '一种自我怀疑的问句。成为“大人”是否意味着必然会失去某些东西？这为整首歌的怀旧与反思定下基调。' },
+                { lyric: 'ベッドに置いてた', furigana: 'ベッドにおいてた', translation: '放在床头的', explanation: '一个具体而私密的场景，指向一个充满个人记忆的物品。' },
+                { lyric: '初めて買った黒いラジオ', furigana: 'はじめてかったくろいラジオ', translation: '第一次买的黑色收音机', explanation: '这台收音机不仅是物理实体，更是青春记忆的载体，象征着纯真、梦想和第一次与外部世界建立连接的媒介。' },
+                { lyric: 'いくつものメロディーが', furigana: 'いくつものメロディーが', translation: '许多旋律', explanation: '收音机播放的不仅仅是音乐，更是时代的印记和情感的共鸣。' },
+                { lyric: 'いくつもの時代を築いた', furigana: 'いくつものじだいをきずいた', translation: '创造了许多时代', explanation: '这句的“築いた”（きずいた）应理解为“创造”或“构建”。指收音机中的旋律陪伴并塑造了主人公的成长时代，也见证了外部世界的变迁。' },
+                { lyric: '思春期に少年から', furigana: 'ししゅんきにしょうねんから', translation: '在青春期，少年从', explanation: '明确点出故事发生在“思春期”这个从少年到成人的关键过渡阶段。' },
+                { lyric: '大人に変わる道を探していた', furigana: 'おとなにかわるみちをさがしていた', translation: '寻找着通往成人的道路', explanation: '描绘了青春期对未来的迷茫探索，试图找到一条成为理想中“大人”的路径。' },
+                { lyric: '汚れもないままに', furigana: 'けがれもないままに', translation: '纯洁无瑕地', explanation: '强调了少年时代的纯真和未被世俗污染的状态。' },
+                { lyric: '飾られた行き場のない', furigana: 'かざられたいきばのない', translation: '被装饰着却无处可去', explanation: '这句描绘了成人世界的虚伪和束缚。外表光鲜（“被装饰着”），内心却感到没有归属（“无处可去”），充满了压抑感。' },
+                { lyric: '押し寄せる人波に', furigana: 'おしよせるひとなみに', translation: '在汹涌的人潮中', explanation: '“人波”象征着都市的喧嚣、社会的压力和复杂的人际关系。主人公在其中感到身不由己。' },
+                { lyric: '本当の幸せ教えてよ', furigana: 'ほんとうのしあわせおしえてよ', translation: '请告诉我真正的幸福是什么', explanation: '歌曲的核心追问。在迷失和困惑中，主人公发出了对生命真谛的呼喊，渴望找到超越物质的、真正的幸福。' },
+                { lyric: '壊れかけのRadio', furigana: 'こわれかけのレディオ', translation: '坏掉的Radio啊', explanation: '这里的“Radio”发音为“レディオ”。“壊れかけ”（即将损坏）而非“壊れた”（已损坏）是关键，它象征着与过去的连接、梦想或内心的声音虽然微弱，但并未完全断绝，保留了希望。' },
+                { lyric: 'いつも聞こえてた', furigana: 'いつもきこえてた', translation: '总是能听到', explanation: '过去，从收音机中（或内心中）总能清晰地听到指引。' },
+                { lyric: 'いつも聞かせてくれてた', furigana: 'いつもきかせてくれてた', translation: '总是让我听到', explanation: '强调了收音机作为一种主动的给予者，曾源源不断地提供信息和力量。' },
+                { lyric: '窓越しに空を見たら', furigana: 'まどごしにそらをみたら', translation: '隔着窗户望向天空', explanation: '即使身处困境，依然保有对外部世界和希望的向往。“天空”象征着自由和可能性。' },
+                { lyric: 'かすかな勇気が生まれた', furigana: 'かすかなゆうきがうまれた', translation: '微弱的勇气油然而生', explanation: '歌曲中希望的第一个闪光点。尽管只是“微弱的”，但勇气已经开始萌生，表明主人公并未完全沉沦。' },
+                { lyric: 'ラジオは知っていた', furigana: 'ラジオはしっていた', translation: '收音机知道', explanation: '将收音机拟人化，它仿佛理解主人公的一切。' },
+                { lyric: '僕の心をノックした', furigana: 'ぼくのこころをノックした', translation: '敲击着我的心', explanation: '收音机传来的旋律或信息，触动了主人公的内心深处，唤醒了沉睡的情感或记忆。' },
+                { lyric: '恋に破れそうな胸', furigana: 'こいにやぶれそうなむね', translation: '仿佛要为爱破碎的胸膛', explanation: '描绘了失恋时的心碎与痛苦，是青春成长中常见的经历。' },
+                { lyric: 'やさしい風が手を振った', furigana: 'やさしいかぜがてをふった', translation: '温柔的风挥着手', explanation: '将“风”拟人化，用温柔的意象来抚慰受伤的心，象征着来自大自然的慰藉。' },
+                { lyric: '華やいだ祭りの後', furigana: 'はなやいだまつりのあと', translation: '华丽祭典之后', explanation: '“华丽祭典”象征着都市生活的喧嚣与浮华。' },
+                { lyric: '静まる街を背に', furigana: 'しずまるまちをせに', translation: '背对着寂静的街道', explanation: '喧嚣过后的寂静更显孤独。主人公背对城市，暗示着一种疏离和内心的孤寂。' },
+                { lyric: '星を眺めていた', furigana: 'ほしをながめていた', translation: '凝望着星空', explanation: '在孤独中仰望星空，寻求超越现实的慰藉和对永恒的思考。' },
+                { lyric: 'けがれもないままに', furigana: 'けがれもないままに', translation: '纯洁无瑕地', explanation: '再次出现，与都市的复杂形成对比，怀念过去的纯真。' },
+                { lyric: '遠ざかる故郷の空', furigana: 'とおざかるこきょうのそら', translation: '渐行渐远的故乡天空', explanation: '“故乡”象征着纯真、根源和过去的自己。物理和心理上的距离都在拉远，充满了对回不去的过往的惆怅。' },
+                { lyric: '帰れない人波に', furigana: 'かえれないひとなみに', translation: '在无法归去的人潮中', explanation: '被都市的“人潮”所困，无法回到精神上的故乡，表达了成长的代价和身不由己的无力感。' },
+                { lyric: 'ギターを弾いていた', furigana: 'ギターをひいていた', translation: '弹奏着吉他', explanation: '通过音乐创作来表达内心的迷茫和寻找出路。' },
+                { lyric: '次のコードも分からずに', furigana: 'つぎのコードもわからずに', translation: '甚至不知道下一个和弦', explanation: '比喻对未来的不确定性，不知道下一步该怎么走，充满了创作和人生道路上的迷茫。' },
+                { lyric: '迷子になりそうな夢', furigana: 'まいごになりそうなゆめ', translation: '仿佛要迷失的梦想', explanation: '曾经清晰的梦想，在现实中变得模糊，有迷失方向的危险。' },
+                { lyric: '素敵な歌が導いた', furigana: 'すてきなうたがみちびいた', translation: '美妙的歌声指引着我', explanation: '在最迷茫的时候，音乐（无论是自己创作的还是听到的）成为了新的指引，带来了希望和方向。' },
+                { lyric: '遠ざかる溢れた夢', furigana: 'とおざかるあふれたゆめ', translation: '渐行渐远的满溢的梦想', explanation: '曾经满溢的梦想随着成长而渐行渐远，表达了对现实的妥协和对逝去理想的伤感。' }
+            ],
+            themes: [
+                { icon: '📻', title: '“坏掉的Radio”的多重象征', content: '它既是承载青春记忆的物理收音机，更是内心希望、梦想和纯真自我的象征。“即将损坏”而非“已经损坏”的状态，暗示了希望虽然微弱，但并未完全消失，保留了治愈的可能性。' },
+                { icon: '🏙️', title: '故乡与都市的对立', content: '歌曲通过“故乡的天空”与“都市的人潮”这两个空间意象的对立，深刻映射了内心的挣扎。故乡代表纯真与过去，都市则象征着复杂的现实与无法回头的成长之路。' },
+                { icon: '🌱', title: '青春到成年的蜕变', content: '歌曲描绘了从“纯洁无瑕”的少年，到在“汹涌人潮”中迷失的成年人的痛苦蜕变。对“真正的幸福”的反复追问，是贯穿这一成长过程的核心命题，体现了对生命价值的深刻探索。' },
+                { icon: '✨', title: '迷茫中的希望微光', content: '尽管歌曲开篇充满了失落，但“微弱的勇气”和“美妙的歌声”等意象，如点点星光般在迷茫的夜空中闪现，传递出即使身处困境，内心深处对美好的渴望和寻找希望的韧性。' }
+            ],
+            vocabulary: [
+                 { word: '壊れかけ', reading: 'こわれかけ', meaning: '即将损坏的状态' },
+                 { word: '聞こえない', reading: 'きこえない', meaning: '听不见' },
+                 { word: '思春期', reading: 'ししゅんき', meaning: '青春期' },
+                 { word: '道', reading: 'みち', meaning: '道路，方法' },
+                 { word: '探す', reading: 'さがす', meaning: '寻找' },
+                 { word: '汚れ', reading: 'けがれ', meaning: '污秽，不洁' },
+                 { word: '飾られた', reading: 'かざられた', meaning: '被装饰的' },
+                 { word: '行き場', reading: 'いきば', meaning: '去处，归宿' },
+                 { word: '人波', reading: 'ひとなみ', meaning: '人潮，人流' },
+                 { word: '幸せ', reading: 'しあわせ', meaning: '幸福' },
+                 { word: '教える', reading: 'おしえる', meaning: '告诉，教导' },
+                 { word: '窓越し', reading: 'まどごし', meaning: '隔着窗户' },
+                 { word: 'かすかな', reading: 'かすかな', meaning: '微弱的，隐约的' },
+                 { word: '勇気', reading: 'ゆうき', meaning: '勇气' },
+                 { word: '恋に破れる', reading: 'こいにやぶれる', meaning: '失恋' },
+                 { word: '華やいだ', reading: 'はなやいだ', meaning: '华丽的，热闹的' },
+                 { word: '静まる', reading: 'しずまる', meaning: '安静下来' },
+                 { word: '眺める', reading: 'ながめる', meaning: '眺望，凝视' },
+                 { word: '遠ざかる', reading: 'とおざかる', meaning: '渐行渐远' },
+                 { word: '故郷', reading: 'こきょう', meaning: '故乡' },
+                 { word: '帰れない', reading: 'かえれない', meaning: '无法回去' },
+                 { word: 'コード', reading: 'コード', meaning: '（吉他）和弦' },
+                 { word: '迷子', reading: 'まいご', meaning: '迷路的孩子' },
+                 { word: '導く', reading: 'みちびく', meaning: '引导，指引' }
+            ]
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const sections = document.querySelectorAll('main section');
+            const navLinks = document.querySelectorAll('.nav-link');
+
+            function updateActiveLinkOnScroll() {
+                let currentSection = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (pageYOffset >= sectionTop - 150) {
+                        currentSection = section.getAttribute('id');
+                    }
+                });
+
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === `#${currentSection}`) {
+                        link.classList.add('active');
+                    }
+                });
+            }
+
+            window.addEventListener('scroll', updateActiveLinkOnScroll);
+
+            const lyricsContainer = document.getElementById('lyrics-container');
+            if (lyricsContainer) {
+                lyricsContainer.innerHTML = appData.lyrics.map((line, index) => {
+                    const hasRuby = line.lyric.includes('(') && line.lyric.includes(')');
+                    let rubyHtml = line.lyric;
+
+                    // Simple furigana logic based on report format
+                    let lyricTextForRuby = line.lyric.replace(/\(.*\)/g, '');
+                    let furiganaText = line.furigana;
+
+                    return `
+                        <div class="lyric-item rounded-lg shadow-sm">
+                            <div class="lyric-header p-4 flex justify-between items-center" data-target="${index}">
+                                <p class="text-md md:text-lg text-stone-800">${line.lyric}</p>
+                                <span class="text-stone-400 transform transition-transform duration-300">▼</span>
+                            </div>
+                            <div id="content-${index}" class="lyric-content px-4 border-t border-stone-200">
+                                <p class="font-semibold text-yellow-800"><ruby>${lyricTextForRuby}<rt>${furiganaText}</rt></ruby></p>
+                                <p class="text-stone-600 mt-2"><strong>中译:</strong> ${line.translation}</p>
+                                <p class="text-stone-600 mt-2"><strong>解读:</strong> ${line.explanation}</p>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                lyricsContainer.addEventListener('click', (e) => {
+                    const header = e.target.closest('.lyric-header');
+                    if (header) {
+                        const targetId = header.dataset.target;
+                        const content = document.getElementById(`content-${targetId}`);
+                        const icon = header.querySelector('span');
+
+                        content.classList.toggle('open');
+                        icon.classList.toggle('rotate-180');
+                    }
+                });
+            }
+
+            const themesContainer = document.getElementById('themes-container');
+            if(themesContainer) {
+                themesContainer.innerHTML = appData.themes.map(theme => `
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-stone-200 hover:shadow-md transition-shadow">
+                        <div class="flex items-center mb-3">
+                            <span class="text-3xl mr-4">${theme.icon}</span>
+                            <h3 class="text-xl font-bold text-yellow-800">${theme.title}</h3>
+                        </div>
+                        <p class="text-stone-700 leading-relaxed">${theme.content}</p>
+                    </div>
+                `).join('');
+            }
+
+            const vocabContainer = document.getElementById('vocab-container');
+            if(vocabContainer) {
+                vocabContainer.innerHTML = appData.vocabulary.map(vocab => `
+                    <div class="vocab-card h-28 cursor-pointer">
+                        <div class="vocab-card-inner rounded-lg shadow-sm">
+                            <div class="vocab-card-front">
+                                <span class="text-xl font-bold">${vocab.word}</span>
+                            </div>
+                            <div class="vocab-card-back">
+                                <span class="text-lg font-semibold">${vocab.reading}</span>
+                                <span class="text-sm mt-1">${vocab.meaning}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                vocabContainer.addEventListener('click', (e) => {
+                    const card = e.target.closest('.vocab-card');
+                    if (card) {
+                        card.classList.toggle('is-flipped');
+                    }
+                });
+            }
+
+            const ctx = document.getElementById('themeBalanceChart')?.getContext('2d');
+            if(ctx) {
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['现实的重压 (人波)', '纯真的回响 (故郷の空)'],
+                        datasets: [{
+                            data: [60, 40],
+                            backgroundColor: [
+                                '#78716c', /* stone-500 */
+                                '#f59e0b'  /* amber-500 */
+                            ],
+                            hoverOffset: 4,
+                            borderColor: '#f5f5f4',
+                            borderWidth: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { font: { size: 14 }, color: '#57534e' }
+                            }
+                        }
+                    }
+                });
+            }
+
+             // Fix Furigana Rendering: A simple loop to apply ruby tags more accurately
+            const lyricHeaders = document.querySelectorAll('.lyric-header p');
+            lyricHeaders.forEach((p, index) => {
+                const lyricData = appData.lyrics[index];
+                const parts = lyricData.lyric.split(/([()])/).filter(Boolean);
+                let html = '';
+                let isInsideParentheses = false;
+                let baseText = '';
+                parts.forEach(part => {
+                    if (part === '(') {
+                        isInsideParentheses = true;
+                    } else if (part === ')') {
+                        isInsideParentheses = false;
+                    } else if (isInsideParentheses) {
+                        // Skip rendering furigana text in the main display
+                    } else {
+                        baseText += part;
+                    }
+                });
+                 p.textContent = baseText;
+            });
+
+            const rubyElements = document.querySelectorAll('.lyric-content ruby');
+            rubyElements.forEach((ruby, index) => {
+                const lyricData = appData.lyrics[index];
+                const baseText = lyricData.lyric.replace(/\(.*?\)/g, '');
+                ruby.innerHTML = `${baseText}<rt>${lyricData.furigana}</rt>`;
+            });
+
+        });
+    </script>
+</body>
+</html>
