@@ -1,0 +1,379 @@
+---
+title: "Forever Young"
+author: "竹原ピストル"
+layout: default
+---
+
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>《Forever Young》- 交互式歌词解析</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Earthy & Resilient (Deep grays, warm browns, muted olive green, with a touch of burnt orange) -->
+    <!-- Application Structure Plan: The SPA is structured into four intuitive sections accessible via a navigation bar: 1. **歌曲概览 (Overview):** Introduces Takehara Pistol and the song's context. A powerful bar chart visualizes the core thematic contrast between "Passive Waiting (雨宿り)" and "Active Pursuit (駆けて行く)". 2. **交互歌词 (Interactive Lyrics):** Uses an accordion layout for a line-by-line analysis of the corrected lyrics. Users can click to reveal detailed explanations and furigana, following the song's narrative from struggle to powerful self-affirmation. 3. **主题探索 (Theme Explorer):** Presents the deep thematic analyses (e.g., the redefinition of "Young," the philosophy of "New Leaves on Withered Leaves") as a series of interactive, robust cards, allowing users to delve into the song's philosophical layers. 4. **核心词汇 (Core Vocabulary):** Transforms the key vocabulary list into interactive, flippable flashcards, reinforcing the specific and evocative language of the song. This structure breaks down the dense report into a user-driven, digestible, and empowering learning experience. -->
+    <!-- Visualization & Content Choices: 1. Thematic Action: Goal=Compare/Inform. Viz=Bar Chart. Interaction=Hover for details. Justification=Visually represents the core choice presented in the lyrics—to either passively wait out life's storms or actively run towards a better future. This is the central call to action. Library=Chart.js. 2. Lyric Deep-Dive: Goal=Organize/Inform. Viz=HTML Accordion. Interaction=Click to expand. Justification=Provides a clean, uncluttered way to access detailed analysis for each line, preventing information overload while encouraging focused study. Library=Vanilla JS. 3. Philosophical Concepts: Goal=Organize/Inform. Viz=Interactive Cards. Interaction=Click/hover effects. Justification=Breaks down abstract concepts into manageable, visually appealing units, facilitating comprehension of the song's deeper meanings. Library=Vanilla JS. 4. Vocabulary Acquisition: Goal=Engage/Inform. Viz=Flippable Flashcards. Interaction=Click to reveal definition. Justification=An active learning tool that is more effective for memory retention than a static list. Library=Vanilla JS. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #f3f4f6; /* gray-100 */
+            color: #374151; /* gray-700 */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+            color: #6b7280; /* gray-500 */
+            border-bottom-width: 3px;
+            border-color: transparent;
+        }
+        .nav-link.active, .nav-link:hover {
+            color: #c2410c; /* orange-700 */
+            border-color: #c2410c;
+        }
+        .lyric-item {
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb; /* gray-200 */
+            transition: all 0.3s ease;
+        }
+        .lyric-item:hover {
+             border-left-color: #c2410c; /* orange-700 */
+             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .lyric-header {
+            cursor: pointer;
+        }
+        .lyric-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out, padding 0.5s ease-in-out;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        .lyric-content.open {
+            max-height: 500px;
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+        }
+        .vocab-card {
+            perspective: 1000px;
+        }
+        .vocab-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .vocab-card.is-flipped .vocab-card-inner {
+            transform: rotateY(180deg);
+        }
+        .vocab-card-front, .vocab-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            padding: 1rem;
+        }
+        .vocab-card-front {
+            background-color: #e5e7eb; /* gray-200 */
+            color: #4b5563; /* gray-600 */
+        }
+        .vocab-card-back {
+            background-color: #f97316; /* orange-500 */
+            color: #ffffff;
+            transform: rotateY(180deg);
+            flex-direction: column;
+        }
+        rt {
+            font-size: 0.8em;
+            color: #9ca3af; /* gray-400 */
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="container mx-auto px-4 py-8 max-w-5xl">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900">Forever Young</h1>
+            <p class="text-lg text-gray-600 mt-2">竹原ピストル - 交互式歌词与主题深度解析</p>
+        </header>
+
+        <nav class="sticky top-0 bg-white/80 backdrop-blur-md z-10 mb-12 shadow-sm rounded-lg">
+            <ul class="flex justify-center items-center -mb-px space-x-4 md:space-x-8 text-base md:text-lg p-2">
+                <li><a href="#overview" class="nav-link inline-block py-3 px-2">歌曲概览</a></li>
+                <li><a href="#lyrics" class="nav-link inline-block py-3 px-2">交互歌词</a></li>
+                <li><a href="#themes" class="nav-link inline-block py-3 px-2">主题探索</a></li>
+                <li><a href="#vocabulary" class="nav-link inline-block py-3 px-2">核心词汇</a></li>
+            </ul>
+        </nav>
+
+        <main>
+            <!-- Section 1: Overview -->
+            <section id="overview" class="mb-16 scroll-mt-24">
+                <div class="bg-white p-6 md:p-8 rounded-xl shadow-md border border-gray-200">
+                    <h2 class="text-2xl font-bold text-orange-800 mb-4">歌曲简介：一位“应援歌手”的生命赞歌</h2>
+                    <p class="text-gray-700 leading-relaxed mb-6">《Forever Young》是日本著名创作歌手及演员竹原ピストル的代表作。他的音乐以其充满力量的吉他弹唱和真诚质朴的歌词而闻名，常被称为“应援歌”，旨在为听众带去面对生活的勇气。这首歌完美体现了他的风格，它不仅仅是对青春的怀念，更是对“年轻”精神的重新定义：一种不畏艰难、主动出击、永远在路上的生命姿态。</p>
+
+                    <h3 class="text-xl font-bold text-orange-800 mb-4">核心抉择：消极等待 vs. 积极奔赴</h3>
+                    <p class="text-gray-700 leading-relaxed mb-6">歌曲开篇便提出了一个核心的人生抉择：“与其躲在屋檐下避雨，不如奔向晴朗的街道”。“避雨”象征着面对困境时的消极逃避或停滞不前，而“奔向晴朗的街道”则代表着主动寻求突破、拥抱希望的积极行动。下方的图表直观地展示了这两种人生态度的力量对比，揭示了歌曲所倡导的核心精神——真正的“年轻”，在于永不停止奔跑的勇气。</p>
+                    <div class="chart-container">
+                        <canvas id="actionChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Interactive Lyrics -->
+            <section id="lyrics" class="mb-16 scroll-mt-24">
+                <div class="bg-white p-6 md:p-8 rounded-xl shadow-md border border-gray-200">
+                    <h2 class="text-2xl font-bold text-orange-800 mb-4">交互式歌词解析</h2>
+                    <p class="text-gray-700 leading-relaxed mb-6">本区域为您呈现校准后的完整歌词。请点击任意一句歌词，即可展开或折叠其对应的假名注音、中文翻译及深度解读。这种方式旨在帮助您将旋律与词义联系起来，更主动地学习和理解这首充满力量的歌曲。</p>
+                    <div id="lyrics-container" class="space-y-3"></div>
+                </div>
+            </section>
+
+            <!-- Section 3: Theme Explorer -->
+            <section id="themes" class="mb-16 scroll-mt-24">
+                <div class="bg-white p-6 md:p-8 rounded-xl shadow-md border border-gray-200">
+                    <h2 class="text-2xl font-bold text-orange-800 mb-4">主题探索</h2>
+                     <p class="text-gray-700 leading-relaxed mb-6">《Forever Young》的魅力在于其多层次的人生哲思。以下卡片概括了歌曲的几个核心思想。点击卡片，可以深入了解每个主题的内涵，以及它们是如何共同构建出这个关于成长、坚持与自我肯定的动人故事。</p>
+                    <div id="themes-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+                </div>
+            </section>
+
+            <!-- Section 4: Core Vocabulary -->
+            <section id="vocabulary" class="scroll-mt-24">
+                <div class="bg-white p-6 md:p-8 rounded-xl shadow-md border border-gray-200">
+                    <h2 class="text-2xl font-bold text-orange-800 mb-4">核心日语词汇学习</h2>
+                    <p class="text-gray-700 leading-relaxed mb-6">为了更深入地理解歌词的精妙之处，我们从报告中提取了核心日语词汇。下面的词汇卡片设计成了可翻转的“抽认卡”。点击任意卡片即可“翻转”查看其读音和中文释义，这是一种有趣且高效的学习方式。</p>
+                    <div id="vocab-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"></div>
+                </div>
+            </section>
+        </main>
+        <footer class="text-center mt-12 text-gray-500 text-sm">
+            <p>交互式应用根据竹原ピストル《Forever Young》深度解析报告生成。</p>
+            <p>&copy; 2025 - 交互式学习体验</p>
+        </footer>
+    </div>
+
+    <script>
+        const appData = {
+            lyrics: [
+                { lyric: '何をどうしても眠れない夜は', furigana: 'なにをどうしてもねむれないよるは', translation: '无论如何也无法入睡的夜晚', explanation: '歌曲以一种普遍的焦虑感开篇，描绘了因内心挣扎而失眠的状态。这不仅仅是生理上的，更是精神上的“清醒”，为后续从被动忍受到主动出击的情感转变埋下伏笔。' },
+                { lyric: '何が何でも眠っちゃいけない夜さ', furigana: 'なにがなんでもねむっちゃいけないよるさ', translation: '是无论如何也不该睡去的夜晚啊', explanation: '从“无法入睡”到“不该睡去”，态度发生质的转变。这暗示主人公决定将困境转化为思考和行动的契机，展现了积极面对问题的决心。' },
+                { lyric: '雨宿りするくらいなら', furigana: 'あまやどりするくらいなら', translation: '与其躲在屋檐下避雨', explanation: '“雨宿り”（避雨）象征着逃避、停滞或被动等待困境过去。这是一个消极应对方式的隐喻。' },
+                { lyric: '晴れている街に駆けて行くさ', furigana: 'はれているまちにかけていくさ', translation: '不如奔向晴朗的街道吧', explanation: '与“避雨”形成鲜明对比，“奔向晴朗的街道”代表着主动出击，拥抱希望。这是歌曲核心的“应援”精神，鼓励人们掌握自己命运的主动权。' },
+                { lyric: 'Forever Young.', furigana: 'フォーエバー ヤング', translation: '永远年轻。', explanation: '点明主题。“年轻”在这里被重新定义为一种精神状态：永不放弃、勇于探索、充满激情。' },
+                { lyric: 'あの頃の君にあって', furigana: 'あのころのきみにあって', translation: '那个时候的你所拥有的', explanation: '引导听众回忆过去，但并非为了单纯怀旧，而是为了引出对“现在”的肯定。' },
+                { lyric: 'Forever Young.', furigana: 'フォーエバー ヤング', translation: '永远年轻。', explanation: '重复并强化核心主题。' },
+                { lyric: '今の君にないものなんてないさ', furigana: 'いまのきみにないものなんてないさ', translation: '现在的你没有什么是不曾拥有的', explanation: '歌曲的核心肯定句。它直接反驳了“今不如昔”的常见感叹，强调了当下的你所拥有的经验、智慧和韧性，是过去无法比拟的财富，给予听众强大的自我肯定。' },
+                { lyric: 'くたびれた言葉で', furigana: 'くたびれたことばで', translation: '用疲惫的言语', explanation: '描绘了语言或表达上的倦怠感，是现实困境的真实写照。但歌曲并未止步于此，而是将其作为新生的起点。' },
+                { lyric: '新しい約束を交わし', furigana: 'あたらしいやくそくをかわし', translation: '交换新的约定', explanation: '在疲惫中寻求新的开始。即使资源有限，依然可以创造新的连接和希望。' },
+                { lyric: '萎れた声で', furigana: 'しおれたこえで', translation: '用枯萎的声音', explanation: '声音的“枯萎”象征着历经磨砺，虽然不再清亮，但背后蕴含着更丰富的人生故事和情感深度。' },
+                { lyric: '新しい歌をうたおう', furigana: 'あたらしい うたをうたおう', translation: '歌唱新的歌曲吧', explanation: '在不完美中创造新的艺术与希望。这象征着生命力和创造力的不竭，是“Forever Young”精神的又一体现。' },
+                { lyric: '満ち満ちた若葉はいつだって', furigana: 'みちみちたわかばはいつだって', translation: '满溢的新叶总是', explanation: '引入自然意象，“若葉”（新叶）象征着新生、活力和希望。' },
+                { lyric: '色褪せた枯葉の上にひらくのさ', furigana: 'いろあせたかれはのうえにひらくのさ', translation: '在褪色的枯叶上绽放啊', explanation: '极富哲理的意象。“枯葉”（枯叶）代表过去和经验，新生命的绽放（ひらく）是建立在过去的基础之上的。这肯定了历史和经验的价值，它们是新生的养分。' },
+                { lyric: 'Forever Young.', furigana: 'フォーエバー ヤング', translation: '永远年轻。', explanation: '在阐述了新旧交替的哲学后，再次回归主题，深化了“年轻”的内涵。' },
+            ],
+            themes: [
+                { icon: '🏃‍♂️', title: '“年轻”的再定义：行动即青春', content: '歌曲挑战了生理年龄对“年轻”的定义，将其与积极的行动力划上等号。真正的年轻，是“奔向晴朗街道”的勇气，是面对困境不选择“避雨”的姿态。' },
+                { icon: '🔄', title: '枯叶与新叶：生命的循环哲学', content: '“新叶在枯叶上绽放”是歌曲的核心哲思。它告诉我们，新生并非凭空而来，而是建立在过去的积累之上。这肯定了经验、历史乃至失败的价值，它们都是未来成长的养分。' },
+                { icon: '💪', title: '自我肯定：现在的你拥有一切', content: '“今の君にないものなんてないさ”是对当下价值的强力断言。它鼓励听众摆脱“今不如昔”的怀旧陷阱，认识到成长所带来的智慧和韧性，是过去无法比拟的财富。' },
+                { icon: '🎤', title: '在不完美中创造', content: '“用疲惫的言语交换新的约定，用枯萎的声音歌唱新的歌曲”。这是一种强大的韧性，表明即使在身心俱疲、条件不佳的情况下，创造和希望的火焰也永远不会熄灭。' }
+            ],
+            vocabulary: [
+                 { word: '眠れない', reading: 'ねむれない', meaning: '无法入睡' },
+                 { word: '雨宿り', reading: 'あまやどり', meaning: '避雨' },
+                 { word: '駆けて行く', reading: 'かけていく', meaning: '奔跑而去' },
+                 { word: 'あの頃', reading: 'あのころ', meaning: '那个时候' },
+                 { word: 'くたびれた', reading: 'くたびれた', meaning: '疲惫的' },
+                 { word: '言葉', reading: 'ことば', meaning: '言语' },
+                 { word: '約束を交わす', reading: 'やくそくをかわす', meaning: '交换约定' },
+                 { word: '萎れた', reading: 'しおれた', meaning: '枯萎的' },
+                 { word: '声', reading: 'こえ', meaning: '声音' },
+                 { word: '満ち満ちた', reading: 'みちみちた', meaning: '充满的，满溢的' },
+                 { word: '若葉', reading: 'わかば', meaning: '新叶' },
+                 { word: 'いつだって', reading: 'いつだって', meaning: '无论何时' },
+                 { word: '色褪せた', reading: 'いろあせた', meaning: '褪色的' },
+                 { word: '枯葉', reading: 'かれは', meaning: '枯叶' },
+                 { word: 'ひらく', reading: 'ひらく', meaning: '绽放，展开' }
+            ]
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const sections = document.querySelectorAll('main section');
+            const navLinks = document.querySelectorAll('.nav-link');
+
+            function updateActiveLinkOnScroll() {
+                let currentSection = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (pageYOffset >= sectionTop - 150) {
+                        currentSection = section.getAttribute('id');
+                    }
+                });
+
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === `#${currentSection}`) {
+                        link.classList.add('active');
+                    }
+                });
+            }
+
+            window.addEventListener('scroll', updateActiveLinkOnScroll);
+
+            const lyricsContainer = document.getElementById('lyrics-container');
+            if (lyricsContainer) {
+                lyricsContainer.innerHTML = appData.lyrics.map((line, index) => `
+                    <div class="lyric-item rounded-lg shadow-sm">
+                        <div class="lyric-header p-4 flex justify-between items-center" data-target="${index}">
+                            <p class="text-md md:text-lg text-gray-800">${line.lyric}</p>
+                            <span class="text-gray-400 transform transition-transform duration-300">▼</span>
+                        </div>
+                        <div id="content-${index}" class="lyric-content px-4 border-t border-gray-200">
+                            <p class="font-semibold text-orange-800"><ruby>${line.lyric.replace(/[\u3040-\u309F\u30A0-\u30FF\uFF00-\uFFEF]/g, '')}<rt>${line.furigana}</rt></ruby></p>
+                            <p class="text-gray-600 mt-2"><strong>中译:</strong> ${line.translation}</p>
+                            <p class="text-gray-600 mt-2"><strong>解读:</strong> ${line.explanation}</p>
+                        </div>
+                    </div>
+                `).join('');
+
+                lyricsContainer.addEventListener('click', (e) => {
+                    const header = e.target.closest('.lyric-header');
+                    if (header) {
+                        const targetId = header.dataset.target;
+                        const content = document.getElementById(`content-${targetId}`);
+                        const icon = header.querySelector('span');
+
+                        document.querySelectorAll('.lyric-content.open').forEach(openContent => {
+                            if (openContent !== content) {
+                                openContent.classList.remove('open');
+                                openContent.previousElementSibling.querySelector('span').classList.remove('rotate-180');
+                            }
+                        });
+
+                        content.classList.toggle('open');
+                        icon.classList.toggle('rotate-180');
+                    }
+                });
+            }
+
+            const themesContainer = document.getElementById('themes-container');
+            if(themesContainer) {
+                themesContainer.innerHTML = appData.themes.map(theme => `
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-lg transition-shadow duration-300">
+                        <div class="flex items-center mb-3">
+                            <span class="text-4xl mr-4">${theme.icon}</span>
+                            <h3 class="text-xl font-bold text-orange-800">${theme.title}</h3>
+                        </div>
+                        <p class="text-gray-700 leading-relaxed">${theme.content}</p>
+                    </div>
+                `).join('');
+            }
+
+            const vocabContainer = document.getElementById('vocab-container');
+            if(vocabContainer) {
+                vocabContainer.innerHTML = appData.vocabulary.map(vocab => `
+                    <div class="vocab-card h-28 cursor-pointer">
+                        <div class="vocab-card-inner rounded-lg shadow-sm">
+                            <div class="vocab-card-front">
+                                <span class="text-xl font-bold">${vocab.word}</span>
+                            </div>
+                            <div class="vocab-card-back">
+                                <span class="text-lg font-semibold">${vocab.reading}</span>
+                                <span class="text-sm mt-1">${vocab.meaning}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                vocabContainer.addEventListener('click', (e) => {
+                    const card = e.target.closest('.vocab-card');
+                    if (card) {
+                        card.classList.toggle('is-flipped');
+                    }
+                });
+            }
+
+            const ctx = document.getElementById('actionChart')?.getContext('2d');
+            if(ctx) {
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['人生态度'],
+                        datasets: [{
+                            label: '消极等待 (雨宿り)',
+                            data: [40],
+                            backgroundColor: '#9ca3af', // gray-400
+                            borderColor: '#6b7280', // gray-500
+                            borderWidth: 1
+                        }, {
+                            label: '积极奔赴 (駆けて行く)',
+                            data: [100],
+                            backgroundColor: '#f97316', // orange-500
+                            borderColor: '#c2410c', // orange-700
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        scales: {
+                            x: {
+                                stacked: true,
+                                display: false,
+                            },
+                            y: {
+                                stacked: true,
+                                display: false,
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { font: { size: 14 }, color: '#4b5563' }
+                            },
+                             tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': 象征力量';
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
