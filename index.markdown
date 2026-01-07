@@ -16,8 +16,9 @@ title: "日本語の歌詞ライブラリ"
         <a href="{{ report.url | relative_url }}">
           {{ report.title | default: report.name }}
         </a>
-        {% if report.author %}
-          <span class="badge bg-primary rounded-pill">{{ report.author }}</span>
+        {% assign artist_name = report.artist | default: report.author %}
+        {% if artist_name %}
+          <span class="badge bg-primary rounded-pill">{{ artist_name }}</span>
         {% endif %}
       </li>
     {% endfor %}
